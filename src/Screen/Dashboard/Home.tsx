@@ -4,24 +4,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { Fonts } from '../../Themes';
+import { Colorpath, Fonts, theme } from '../../Themes';
 import { DASHBOARD_STATS, EXAM_CATEGORIES, MOCK_CHALLENGES, QUICK_ACTIONS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
+import { FloatingMedicalBackground } from '../../Components/FloatingMedicalBackground';
 
-const actionEmojis: Record<string, string> = {
-  '1': '⚡',
-  '2': '📚',
-  '3': '📝',
-  '4': '📅',
-  '5': '🎯',
-  '6': '📄',
+const actionIcons: Record<string, string> = {
+  '1': 'flash',
+  '2': 'book',
+  '3': 'document-text',
+  '4': 'calendar',
+  '5': 'trophy',
+  '6': 'copy',
 };
 
 const STAT_STYLES = [
-  { color: '#0EA5E9', label: 'Accuracy' },
-  { color: '#6366F1', label: 'Rank' },
-  { color: '#F59E0B', label: 'Streak' },
-  { color: '#10B981', label: 'Tests Done' },
+  { color: theme.colors.secondary, label: 'Accuracy' },
+  { color: theme.colors.primaryDark, label: 'Rank' },
+  { color: theme.colors.warning, label: 'Streak' },
+  { color: theme.colors.success, label: 'Tests Done' },
 ];
 
 export const HomeScreen = () => {
@@ -45,7 +46,7 @@ export const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F4F7FB" />
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.background} translucent={false} />
 
       <View style={styles.header}>
         <View style={styles.profileRow}>
@@ -57,13 +58,13 @@ export const HomeScreen = () => {
 
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerButton}>
-            <Icon name="notifications" size={22} color="#EAB308" />
+            <Icon name="notifications" size={22} color={theme.colors.warning} />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerButton}>
-            <Icon name="search-outline" size={22} color="#475569" />
+            <Icon name="search-outline" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -71,9 +72,9 @@ export const HomeScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.heroWrapper}>
           <LinearGradient
-            colors={['#7A63F2', '#4E8EDF', '#18B5A9']}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
+            colors={[theme.colors.primary, theme.colors.secondary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={styles.challengeCard}
           >
             <View style={styles.challengeHeader}>
@@ -109,8 +110,11 @@ export const HomeScreen = () => {
               key={action.id}
               style={styles.actionCard}
               onPress={() => navigation.navigate(resolveRoute(action.route))}
+              activeOpacity={0.8}
             >
-              <Text style={styles.actionIconText}>{actionEmojis[action.id]}</Text>
+              <View style={styles.actionIconWrap}>
+                <Icon name={actionIcons[action.id] || 'apps'} size={24} color={theme.colors.primary} />
+              </View>
               <Text style={styles.actionText}>{action.title}</Text>
             </TouchableOpacity>
           ))}
@@ -178,51 +182,51 @@ export const HomeScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F7FB',
+    backgroundColor: theme.colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 16,
+    zIndex: 10,
   },
   profileRow: {
     flex: 1,
   },
   greeting: {
-    color: '#1E293B',
+    color: theme.colors.text,
     fontFamily: Fonts.interbold,
-    fontSize: 18,
+    fontSize: 22,
     marginBottom: 4,
-    fontWeight: '700',
   },
   userName: {
-    color: '#0F172A',
+    color: theme.colors.primary,
     fontFamily: Fonts.interbold,
-    fontSize: 18,
-    fontWeight: '700',
   },
   subGreeting: {
-    color: '#64748B',
+    color: Colorpath.TextSecondary,
     fontFamily: Fonts.intermedium,
-    fontSize: 13,
+    fontSize: 14,
   },
   headerActions: {
     flexDirection: 'row',
     gap: 12,
   },
   headerButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: theme.colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#CBD5E1',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.primaryDark,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.04,
     shadowRadius: 10,
     elevation: 2,
   },
@@ -230,23 +234,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -2,
     right: -2,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#0EA5E9',
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colorpath.Danger,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: theme.colors.surface,
   },
   notificationBadgeText: {
-    color: '#FFF',
-    fontSize: 9,
+    color: theme.colors.white,
+    fontSize: 10,
     fontFamily: Fonts.interbold,
   },
   scrollContent: {
     paddingBottom: 40,
+    zIndex: 10,
   },
   heroWrapper: {
     paddingHorizontal: 20,
@@ -254,53 +259,55 @@ const styles = StyleSheet.create({
   },
   challengeCard: {
     borderRadius: 20,
-    padding: 24,
-    shadowColor: '#5E73E5',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
+    padding: 20,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
     elevation: 8,
   },
   challengeHeader: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: 14,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
     marginBottom: 16,
   },
   challengeTag: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontSize: 12,
+    letterSpacing: 1,
   },
   challengeTitle: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
     fontFamily: Fonts.interbold,
-    fontSize: 21,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 20,
+    marginBottom: 6,
   },
   challengeSubtitle: {
-    color: 'rgba(255,255,255,0.88)',
+    color: 'rgba(255,255,255,0.9)',
     fontFamily: Fonts.intermedium,
-    fontSize: 14,
+    fontSize: 13,
     marginBottom: 20,
   },
   joinButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.white,
     borderRadius: 14,
-    paddingHorizontal: 18,
+    paddingHorizontal: 20,
     paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   joinButtonText: {
-    color: '#0D9488',
+    color: theme.colors.primary,
     fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -310,15 +317,17 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '23%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
     alignItems: 'center',
     paddingVertical: 14,
-    shadowColor: '#CBD5E1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.primaryDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   statValue: {
     fontFamily: Fonts.interbold,
@@ -326,7 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statLabel: {
-    color: '#94A3B8',
+    color: Colorpath.TextSecondary,
     fontFamily: Fonts.intermedium,
     fontSize: 10,
   },
@@ -338,16 +347,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    color: '#1E293B',
+    color: theme.colors.text,
     fontFamily: Fonts.interbold,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
   },
   seeAll: {
-    color: '#6366F1',
-    fontFamily: Fonts.intersemibold,
-    fontSize: 13,
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontFamily: Fonts.interbold,
+    fontSize: 14,
   },
   actionGrid: {
     flexDirection: 'row',
@@ -357,23 +364,31 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '31%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
     alignItems: 'center',
-    paddingVertical: 8,
-    shadowColor: '#CBD5E1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 3,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.primaryDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
     marginBottom: 12,
   },
-  actionIconText: {
-    fontSize: 32,
-    marginBottom: 10,
+  actionIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(10, 75, 143, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   actionText: {
-    color: '#0F172A',
+    color: theme.colors.text,
     fontFamily: Fonts.interbold,
     fontSize: 11,
     textAlign: 'center',
@@ -382,27 +397,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   categoryChip: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 22,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 999,
-    shadowColor: '#CBD5E1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-    marginRight: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginRight: 12,
   },
   categoryChipActive: {
-    backgroundColor: '#1C86F8',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   categoryText: {
-    color: '#64748B',
+    color: Colorpath.TextSecondary,
     fontFamily: Fonts.interbold,
-    fontSize: 13,
+    fontSize: 14,
   },
   categoryTextActive: {
-    color: '#FFFFFF',
+    color: theme.colors.white,
   },
   mockChallengeWrap: {
     paddingHorizontal: 20,
@@ -411,82 +429,81 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mockChallengeCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.colors.surface,
     borderRadius: 18,
     padding: 16,
-    shadowColor: '#CBD5E1',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    shadowColor: theme.colors.primaryDark,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 14,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   mockChallengeTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   mockType: {
     flex: 1,
-    color: '#0F172A',
+    color: theme.colors.text,
     fontFamily: Fonts.interbold,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
     marginRight: 10,
   },
   viewDetails: {
-    color: '#6366F1',
-    fontFamily: Fonts.intersemibold,
-    fontSize: 12,
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontFamily: Fonts.interbold,
+    fontSize: 13,
   },
   mockStatsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: theme.colors.background,
+    borderRadius: 16,
+    padding: 16,
   },
   mockStatBox: {
     flex: 1,
   },
   mockStatDivider: {
     width: 1,
-    height: 34,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 14,
+    height: 40,
+    backgroundColor: theme.colors.border,
+    marginHorizontal: 16,
   },
   mockStatLabel: {
-    color: '#64748B',
+    color: Colorpath.TextSecondary,
     fontFamily: Fonts.intermedium,
-    fontSize: 11,
-    marginBottom: 4,
-  },
-  mockStatValue: {
-    color: '#0F172A',
-    fontFamily: Fonts.interbold,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  emptyMockCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 18,
-    alignItems: 'center',
-    shadowColor: '#CBD5E1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 14,
-    elevation: 4,
-  },
-  emptyMockTitle: {
-    color: '#0F172A',
-    fontFamily: Fonts.interbold,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 12,
     marginBottom: 6,
   },
+  mockStatValue: {
+    color: theme.colors.text,
+    fontFamily: Fonts.interbold,
+    fontSize: 18,
+  },
+  emptyMockCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  emptyMockTitle: {
+    color: theme.colors.text,
+    fontFamily: Fonts.interbold,
+    fontSize: 18,
+    marginBottom: 8,
+  },
   emptyMockText: {
-    color: '#64748B',
-    fontFamily: Fonts.interregular,
-    fontSize: 13,
+    color: Colorpath.TextSecondary,
+    fontFamily: Fonts.intermedium,
+    fontSize: 14,
     textAlign: 'center',
+    lineHeight: 22,
   },
 });

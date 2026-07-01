@@ -1,82 +1,176 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Animated,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Fonts, Imagepath, theme } from '../../Themes';
+import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { Fonts, theme } from '../../Themes';
 import { Input } from '../../Components/inputs/Input';
 import { Button } from '../../Components/buttons/Button';
+import { FloatingMedicalBackground } from '../../Components/FloatingMedicalBackground';
 import { ROUTES } from '../../Navigation/RouteNames';
-import Icon from 'react-native-vector-icons/Ionicons';
 
 export const LoginScreen = () => {
   const navigation = useNavigation<any>();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Staggered slide-up animations for the form
+  const fadeAnim1 = useRef(new Animated.Value(0)).current;
+  const slideAnim1 = useRef(new Animated.Value(30)).current;
+  const fadeAnim2 = useRef(new Animated.Value(0)).current;
+  const slideAnim2 = useRef(new Animated.Value(30)).current;
+  const fadeAnim3 = useRef(new Animated.Value(0)).current;
+  const slideAnim3 = useRef(new Animated.Value(30)).current;
+
+  // Header abstract shape animations
+  const shapeAnim1 = useRef(new Animated.Value(0)).current;
+  const shapeAnim2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Form intro animation
+    const animateIn = (fade: Animated.Value, slide: Animated.Value, delay: number) => {
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.parallel([
+          Animated.timing(fade, { toValue: 1, duration: 400, useNativeDriver: true }),
+          Animated.spring(slide, { toValue: 0, friction: 8, tension: 40, useNativeDriver: true })
+        ])
+      ]).start();
+    };
+
+    animateIn(fadeAnim1, slideAnim1, 100);
+    animateIn(fadeAnim2, slideAnim2, 200);
+    animateIn(fadeAnim3, slideAnim3, 300);
+
+    // Abstract header background slow drift
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shapeAnim1, { toValue: 1, duration: 8000, useNativeDriver: true }),
+        Animated.timing(shapeAnim1, { toValue: 0, duration: 8000, useNativeDriver: true })
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shapeAnim2, { toValue: 1, duration: 10000, useNativeDriver: true }),
+        Animated.timing(shapeAnim2, { toValue: 0, duration: 10000, useNativeDriver: true })
+      ])
+    ).start();
+  }, []);
 
   const handleLogin = () => {
     navigation.replace(ROUTES.MAIN_STACK);
   };
 
+  const headerScale1 = shapeAnim1.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] });
+  const headerTrans1 = shapeAnim1.interpolate({ inputRange: [0, 1], outputRange: [0, -20] });
+  const headerTrans2 = shapeAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, 30] });
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.heroSection}>
-          <View style={[styles.heroGlow, styles.heroGlowLeft]} />
-          <View style={[styles.heroGlow, styles.heroGlowRight]} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
+      {/* Abstract Gradient Header (25% height) */}
+      <View style={styles.headerContainer}>
+        <Animated.View style={[styles.abstractShape, styles.shapePrimary, { transform: [{ scale: headerScale1 }, { translateY: headerTrans1 }] }]} />
+        <Animated.View style={[styles.abstractShape, styles.shapeSecondary, { transform: [{ translateY: headerTrans2 }] }]} />
+        <LinearGradient
+          colors={['rgba(248, 250, 252, 0.4)', theme.colors.background]}
+          style={styles.headerOverlay}
+        />
 
-          <Text style={styles.appName}>Welcome Back!</Text>
-          <Text style={styles.tagline}>Sign in to continue your preparation</Text>
-
-          <View style={styles.tabContainer}>
-            <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-              <Text style={styles.activeTabText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.tab} onPress={() => navigation.navigate(ROUTES.REGISTER)}>
-              <Text style={styles.inactiveTabText}>Register</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.welcomeText}>Welcome Back</Text>
+          <Text style={styles.subtitleText}>Sign in to continue your learning journey.</Text>
         </View>
+      </View>
 
-        <View style={styles.formContainer}>
-          <Input
-            label="Email Address"
-            placeholder="Enter email address"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            leftIcon="mail-outline"
-          />
+      <FloatingMedicalBackground />
 
-          <Input
-            label="Password"
-            placeholder="Enter password"
-            isPassword
-            leftIcon="lock-closed-outline"
-          />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, zIndex: 10 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-          <View style={styles.optionsContainer}>
-            <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)}>
-              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe ? <Icon name="checkmark" size={13} color={theme.colors.white} /> : null}
-              </View>
-              <Text style={styles.rememberText}>Remember Password</Text>
+          <Animated.View style={{ opacity: fadeAnim1, transform: [{ translateY: slideAnim1 }] }}>
+            <Input
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              leftIcon="mail-outline"
+            />
+
+            <Input
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              isPassword
+              leftIcon="lock-closed-outline"
+            />
+
+            <View style={styles.optionsContainer}>
+              <TouchableOpacity style={styles.checkboxContainer} onPress={() => setRememberMe(!rememberMe)} activeOpacity={0.8}>
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe ? <Icon name="checkmark" size={14} color={theme.colors.white} /> : null}
+                </View>
+                <Text style={styles.rememberText}>Remember Me</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={() => navigation.navigate(ROUTES.FORGOT_PASSWORD)} activeOpacity={0.8}>
+                <Text style={styles.forgotText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          <Animated.View style={{ opacity: fadeAnim2, transform: [{ translateY: slideAnim2 }] }}>
+            <Button title="Sign In" onPress={handleLogin} style={styles.primaryBtn} />
+
+            <View style={styles.dividerWrap}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
+              <Icon name="logo-google" size={20} color={theme.colors.text} style={styles.socialIcon} />
+              <Text style={styles.socialBtnText}>Continue with Google</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.FORGOT_PASSWORD)}>
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </View>
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8}>
+                <Icon name="logo-apple" size={20} color={theme.colors.text} style={styles.socialIcon} />
+                <Text style={styles.socialBtnText}>Continue with Apple</Text>
+              </TouchableOpacity>
+            )}
+          </Animated.View>
 
-          <Button title="Sign In" onPress={handleLogin} style={styles.primaryButton} />
+        </ScrollView>
 
-
-
-          <Text style={styles.termsText}>
-            By signing in, you agree to our <Text style={styles.linkText}>Terms</Text> &amp;{' '}
-            <Text style={styles.linkText}>Privacy Policy</Text>
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        <Animated.View style={[styles.footer, { opacity: fadeAnim3, transform: [{ translateY: slideAnim3 }] }]}>
+          <TouchableOpacity
+            style={styles.footerWrap}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate(ROUTES.REGISTER)}
+          >
+            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerAction}>Create Account</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -85,165 +179,77 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  heroSection: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 44,
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  heroGlow: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.09)',
-  },
-  heroGlowLeft: {
-    top: -60,
-    left: -40,
-  },
-  heroGlowRight: {
-    right: -60,
-    bottom: -80,
-  },
-  logoCard: {
-    width: 84,
-    height: 84,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    marginBottom: 18,
-  },
-  logoImage: {
-    width: 60,
-    height: 60,
-  },
-  appName: {
-    ...theme.typography.h1,
-    fontFamily: Fonts.interbold,
-    color: theme.colors.white,
-    marginBottom: 8,
-    fontSize: 32,
-  },
-  tagline: {
-    ...theme.typography.body,
-    color: 'rgba(255,255,255,0.85)',
-    marginBottom: 32,
-    fontSize: 15,
-  },
-  tabContainer: {
-    flexDirection: 'row',
+  headerContainer: {
+    height: '25%',
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 18,
-    padding: 4,
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 60,
   },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    borderRadius: 14,
+  abstractShape: {
+    position: 'absolute',
+    borderRadius: 999,
+    opacity: 0.8,
   },
-  activeTab: {
-    backgroundColor: theme.colors.white,
+  shapePrimary: {
+    width: 300,
+    height: 300,
+    backgroundColor: 'rgba(79, 70, 229, 0.15)', // Light Primary Indigo
+    top: -100,
+    right: -50,
   },
-  activeTabText: {
-    color: theme.colors.primary,
-    fontFamily: Fonts.intersemibold,
+  shapeSecondary: {
+    width: 200,
+    height: 200,
+    backgroundColor: 'rgba(6, 182, 212, 0.15)', // Light Secondary Teal
+    top: -50,
+    left: -80,
+  },
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  headerTextWrap: {
+    position: 'relative',
+    zIndex: 10,
+  },
+  welcomeText: {
+    fontFamily: Fonts.interbold,
+    fontSize: 32,
+    color: theme.colors.text,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  subtitleText: {
+    fontFamily: Fonts.interregular,
     fontSize: 16,
-    fontWeight: "bold"
+    color: theme.colors.textLight,
   },
-  inactiveTabText: {
-    color: theme.colors.white,
-    fontFamily: Fonts.intersemibold,
-    fontSize: 16,
-    fontWeight: "bold"
-  },
-  formContainer: {
+  scrollContent: {
     paddingHorizontal: 24,
     paddingTop: 32,
-    paddingBottom: 34,
-    backgroundColor: theme.colors.white,
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    marginTop: -30,
-    flex: 1,
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  label: {
-    ...theme.typography.caption,
-    fontFamily: Fonts.intersemibold,
-    color: theme.colors.text,
-    fontSize: 15,
-    marginBottom: 10,
-  },
-  phoneRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 16,
-  },
-  countryPill: {
-    width: 90,
-    minHeight: 58,
-    borderRadius: theme.borderRadius.medium,
-    backgroundColor: theme.colors.white,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    shadowColor: '#B5CAE6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 2,
-  },
-  flag: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-  countryCode: {
-    color: theme.colors.text,
-    fontFamily: Fonts.intersemibold,
-    fontSize: 15,
-  },
-  phoneInputWrap: {
-    flex: 1,
-  },
-  zeroMargin: {
-    marginBottom: 0,
+    paddingBottom: 40,
   },
   optionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 2,
+    marginTop: 8,
+    marginBottom: 32,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   checkbox: {
-    width: 18,
-    height: 18,
+    width: 22,
+    height: 22,
     borderRadius: 6,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.border,
-    marginRight: 8,
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: theme.colors.white,
@@ -253,7 +259,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   rememberText: {
-    color: theme.colors.textLight,
+    color: theme.colors.text,
     fontFamily: Fonts.intermedium,
     fontSize: 14,
   },
@@ -262,40 +268,61 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.intersemibold,
     fontSize: 14,
   },
-  primaryButton: {
-    marginBottom: 18,
-    fontSize: 20,
-    fontFamily: Fonts.intersemibold,
-    fontWeight: "bold"
+  primaryBtn: {
+    marginBottom: 24,
   },
-  dividerContainer: {
+  dividerWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 24,
   },
-  divider: {
+  dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: theme.colors.border,
   },
-  orText: {
+  dividerText: {
     color: theme.colors.textLight,
-    marginHorizontal: 10,
-    fontFamily: Fonts.interregular,
-  },
-  secondaryButton: {
-    marginBottom: 18,
-  },
-  termsText: {
-    textAlign: 'center',
-    color: theme.colors.textLight,
-    fontFamily: Fonts.interregular,
+    fontFamily: Fonts.intermedium,
     fontSize: 12,
-    lineHeight: 20,
-    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    letterSpacing: 1,
   },
-  linkText: {
-    color: theme.colors.primary,
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 56,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.white,
+    marginBottom: 16,
+  },
+  socialIcon: {
+    marginRight: 12,
+  },
+  socialBtnText: {
+    color: theme.colors.text,
     fontFamily: Fonts.intersemibold,
+    fontSize: 16,
+  },
+  footer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  footerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerText: {
+    color: theme.colors.textLight,
+    fontFamily: Fonts.intermedium,
+    fontSize: 15,
+  },
+  footerAction: {
+    color: theme.colors.primary,
+    fontFamily: Fonts.interbold,
+    fontSize: 15,
   },
 });

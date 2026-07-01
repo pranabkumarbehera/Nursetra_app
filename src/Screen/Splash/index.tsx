@@ -24,8 +24,8 @@ export const SplashScreen = () => {
   const scaleAnim = React.useRef(new Animated.Value(0.5)).current;
   const slideAnim = React.useRef(new Animated.Value(50)).current;
   const circleAnim = React.useRef(new Animated.Value(1)).current;
-  const assembleAnim = React.useRef(new Animated.Value(0)).current;
   const taglineAnim = React.useRef(new Animated.Value(0)).current;
+  const colorAnim = React.useRef(new Animated.Value(0)).current;
   const chipAnims = React.useRef(EXAM_CHIPS.map(() => new Animated.Value(0))).current;
   const iconAnims = React.useRef(BG_ICONS.map(() => new Animated.Value(0))).current;
 
@@ -37,6 +37,30 @@ export const SplashScreen = () => {
       Animated.sequence([
         Animated.timing(circleAnim, { toValue: 1.15, duration: 2000, useNativeDriver: true }),
         Animated.timing(circleAnim, { toValue: 1, duration: 2000, useNativeDriver: true })
+      ])
+    ).start();
+
+    // Animate logo color transition
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(1500), // Show original logo for 1.5s
+        Animated.timing(colorAnim, {
+          toValue: 1,
+          duration: 2000, // Fade into Primary
+          useNativeDriver: false, // Color anim requires false
+        }),
+        Animated.delay(1000),
+        Animated.timing(colorAnim, {
+          toValue: 2,
+          duration: 2000, // Shift to Secondary
+          useNativeDriver: false,
+        }),
+        Animated.delay(1000),
+        Animated.timing(colorAnim, {
+          toValue: 0,
+          duration: 2000, // Fade back to original logo
+          useNativeDriver: false,
+        })
       ])
     ).start();
 
@@ -57,12 +81,6 @@ export const SplashScreen = () => {
         toValue: 0,
         friction: 8,
         tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.spring(assembleAnim, {
-        toValue: 1,
-        friction: 5,
-        tension: 30,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -107,6 +125,18 @@ export const SplashScreen = () => {
     outputRange: ['0%', '100%'],
   });
 
+  // Opacity of the tinted overlay
+  const overlayOpacity = colorAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [0, 1, 1], // Transparent at 0, fully opaque at 1 and 2
+  });
+
+  // Color of the tinted overlay
+  const overlayColor = colorAnim.interpolate({
+    inputRange: [0, 1, 2],
+    outputRange: [theme.colors.primary, theme.colors.primary, theme.colors.secondary],
+  });
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.glowCircle, styles.glowTop, { transform: [{ scale: circleAnim }] }]} />
@@ -121,40 +151,25 @@ export const SplashScreen = () => {
             { opacity: iconAnims[index], transform: [{ scale: iconAnims[index] }, { rotate: icon.rotate }] }
           ]}
         >
-          <Icon name={icon.name} size={icon.size} color="rgba(255,255,255,0.12)" />
+          <Icon name={icon.name} size={icon.size} color="rgba(10, 75, 143, 0.08)" />
         </Animated.View>
       ))}
 
       <Animated.View style={[styles.centerContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
-        <View style={styles.logoBadge}>
-          <View style={{ width: 110, height: 110 }}>
-            {/* Top-Left Piece */}
-            <Animated.View style={[styles.logoPiece, { top: 0, left: 0, transform: [{ translateX: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] }) }, { translateY: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] }) }, { rotate: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) }] }]}>
-              <Image source={Imagepath.Logo} style={[styles.logo, { top: 0, left: 0 }]} resizeMode="contain" />
-            </Animated.View>
-
-            {/* Top-Right Piece */}
-            <Animated.View style={[styles.logoPiece, { top: 0, left: 55, transform: [{ translateX: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }, { translateY: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] }) }, { rotate: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: ['90deg', '0deg'] }) }] }]}>
-              <Image source={Imagepath.Logo} style={[styles.logo, { top: 0, left: -55 }]} resizeMode="contain" />
-            </Animated.View>
-
-            {/* Bottom-Left Piece */}
-            <Animated.View style={[styles.logoPiece, { top: 55, left: 0, transform: [{ translateX: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] }) }, { translateY: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }, { rotate: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) }] }]}>
-              <Image source={Imagepath.Logo} style={[styles.logo, { top: -55, left: 0 }]} resizeMode="contain" />
-            </Animated.View>
-
-            {/* Bottom-Right Piece */}
-            <Animated.View style={[styles.logoPiece, { top: 55, left: 55, transform: [{ translateX: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }, { translateY: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: [60, 0] }) }, { rotate: assembleAnim.interpolate({ inputRange: [0, 1], outputRange: ['90deg', '0deg'] }) }] }]}>
-              <Image source={Imagepath.Logo} style={[styles.logo, { top: -55, left: -55 }]} resizeMode="contain" />
-            </Animated.View>
-
-            {/* Full Logo fallback to cover seams after assembly */}
-            <Animated.Image source={Imagepath.Logo} style={[styles.logo, { opacity: assembleAnim.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1] }) }]} resizeMode="contain" />
-          </View>
+        <View style={styles.logoWrap}>
+          {/* Base: Original Logo (Shows first) */}
+          <Image source={Imagepath.Logo} style={styles.logo} resizeMode="contain" />
+          
+          {/* Overlay: Tinted Logo (Fades in over time) */}
+          <Animated.Image 
+            source={Imagepath.Logo} 
+            style={[styles.logo, { opacity: overlayOpacity, tintColor: overlayColor }]} 
+            resizeMode="contain" 
+          />
         </View>
         <Text style={styles.appName}>Nursetra</Text>
         <Animated.Text style={[styles.tagline, { opacity: taglineAnim, transform: [{ scale: taglineAnim }] }]}>
-          Empowering Nursing Aspirants for Success
+          Learn. Succeed. Get Hired.
         </Animated.Text>
       </Animated.View>
 
@@ -178,7 +193,7 @@ export const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.primary,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
     paddingVertical: 40,
     justifyContent: 'space-between',
@@ -187,7 +202,7 @@ const styles = StyleSheet.create({
   glowCircle: {
     position: 'absolute',
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(10, 75, 143, 0.05)',
   },
   glowTop: {
     width: 260,
@@ -212,43 +227,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 0,
   },
-  logoBadge: {
-    width: 112,
-    height: 112,
-    borderRadius: 32,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#BFE1FF',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 10,
+  logoWrap: {
+    width: 350,
+    height: 350,
     marginBottom: 24,
-  },
-  logoPiece: {
-    position: 'absolute',
-    width: 55,
-    height: 55,
-    overflow: 'hidden',
+    position: 'relative',
   },
   logo: {
     position: 'absolute',
-    width: 110,
-    height: 110,
+    width: 350,
+    height: 350,
   },
   appName: {
     ...theme.typography.h1,
     fontFamily: Fonts.interbold,
     fontSize: 34,
-    color: theme.colors.white,
+    color: '#0A4B8F',
     marginBottom: 10,
   },
   tagline: {
     ...theme.typography.body,
-    color: 'rgba(255,255,255,0.88)',
+    color: '#4B5563',
     textAlign: 'center',
     lineHeight: 24,
+    fontSize: 16,
+    fontWeight: "bold"
   },
   footer: {
     alignItems: 'center',
@@ -264,12 +267,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: '#F0F5FF',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: '#D4E4FC',
   },
   chipText: {
-    color: theme.colors.white,
+    color: '#0A4B8F',
     fontFamily: Fonts.intermedium,
     fontSize: 12,
   },
@@ -277,17 +280,17 @@ const styles = StyleSheet.create({
     width: 140,
     height: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.26)',
+    backgroundColor: '#E5E7EB',
     overflow: 'hidden',
   },
   loadingBar: {
     width: '62%',
     height: '100%',
-    backgroundColor: theme.colors.white,
+    backgroundColor: '#0A4B8F',
   },
   loadingText: {
     marginTop: 12,
-    color: 'rgba(255,255,255,0.8)',
+    color: '#6B7280',
     fontFamily: Fonts.interregular,
     fontSize: 12,
   },

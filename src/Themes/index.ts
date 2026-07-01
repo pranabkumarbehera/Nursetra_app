@@ -4,18 +4,19 @@ import Imagepath from './Imagepath';
 
 const colors = {
   primary: Colorpath.Primary,
+  primaryDark: Colorpath.PrimaryDark,
+  accent: Colorpath.Accent,
+  text: Colorpath.Text,
+  surface: Colorpath.Surface,
+  card: Colorpath.Surface,
   secondary: Colorpath.Secondary,
-  accent: Colorpath.Tertiary,
   background: Colorpath.Background,
-  text: Colorpath.Black,
   textLight: Colorpath.TextSecondary,
   white: Colorpath.White,
   border: Colorpath.Border,
   error: Colorpath.Danger,
   success: Colorpath.Success,
   warning: Colorpath.Warning,
-  card: Colorpath.White,
-  info: '#6A5AE0',
 } as const;
 
 const borderRadius = {

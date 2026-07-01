@@ -1,5 +1,5 @@
 const Colorpath = {
-    Primary: '#0A84FF',
+    Primary: '#0A4B8F',
     Secondary: '#3B9EFF',
     Tertiary: '#00C2FF',
     White: '#FFFFFF',
@@ -10,6 +10,9 @@ const Colorpath = {
     Success: '#22C55E',
     Warning: '#F59E0B',
     Danger: '#EF4444',
+    PrimaryDark: '#6366F1',
+    Accent: '#14B8A6',
+    Text: '#0F172A',
+    Surface: '#FFFFFF',
 };
-
 export default Colorpath;
