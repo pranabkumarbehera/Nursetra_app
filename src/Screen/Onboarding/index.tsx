@@ -39,8 +39,12 @@ export const OnboardingScreen = () => {
   const floatUp = floatAnim;
   const floatDown = floatAnim.interpolate({ inputRange: [-8, 0], outputRange: [8, 0] });
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (isLastSlide) {
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+      } catch (e) {}
       navigation.replace(ROUTES.LOGIN);
       return;
     }
@@ -236,7 +240,13 @@ export const OnboardingScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <TouchableOpacity style={styles.skipButton} onPress={() => navigation.replace(ROUTES.LOGIN)}>
+      <TouchableOpacity style={styles.skipButton} onPress={async () => {
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          await AsyncStorage.setItem('hasSeenOnboarding', 'true');
+        } catch (e) {}
+        navigation.replace(ROUTES.LOGIN);
+      }}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 

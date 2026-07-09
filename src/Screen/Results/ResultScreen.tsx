@@ -1,63 +1,175 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
 import { Fonts, theme } from '../../Themes';
 import { SecurityNotice } from '../../Components/security/SecurityNotice';
+import { getTestResultRequest } from '../../Redux/Reducers/MockTestReducer';
+import { RootState } from '../../Redux/Store';
+import { ROUTES } from '../../Navigation/RouteNames';
+import { bootstrapHomeRequest } from '../../Redux/Reducers/HomeReducer';
 
-const RESULT_QUESTIONS = Array.from({ length: 20 }, (_, index) => {
-  const states = ['correct', 'incorrect', 'skipped'] as const;
-  const state = states[index % states.length];
-  const rightAnswers = ['A', 'B', 'C', 'D'];
-  const correctAnswer = rightAnswers[index % 4];
-  const selectedAnswer =
-    state === 'skipped'
-      ? null
-      : state === 'correct'
-        ? correctAnswer
-        : rightAnswers[(index + 1) % 4];
+const HERO_GRADIENT = ['#247ce7', '#0B5FA8', '#14B8A6'];
+const SCORE_GRADIENT = ['#FFFFFF', '#F8FAFC', '#EEF2F7'];
+const HERO_SOFT_GRADIENT = ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)'];
+const SUMMARY_GRADIENT = ['rgba(255,255,255,0.98)', 'rgba(244,249,255,0.98)'];
+const CARD_BLUE_GRADIENT = ['rgba(11,95,168,0.12)', 'rgba(20,184,166,0.07)'];
+const CARD_GOLD_GRADIENT = ['rgba(245,158,11,0.14)', 'rgba(251,191,36,0.08)'];
+const CARD_RED_GRADIENT = ['rgba(254,226,226,0.95)', 'rgba(255,237,213,0.85)'];
+const CARD_GREEN_GRADIENT = ['rgba(220,252,231,0.95)', 'rgba(191,219,254,0.55)'];
+const REVIEW_BORDER = 'rgba(11, 95, 168, 0.12)';
 
-  return {
-    id: `result-question-${index + 1}`,
-    questionNumber: index + 1,
-    question: `Sample nursing mock question ${index + 1}: identify the most appropriate clinical answer for this scenario.`,
-    options: [
-      'Option A sample answer',
-      'Option B sample answer',
-      'Option C sample answer',
-      'Option D sample answer',
-    ],
-    selectedAnswer,
-    correctAnswer,
-    status: state,
-    marks: state === 'correct' ? '+1' : state === 'incorrect' ? '-0.5' : '0',
-  };
-});
+const getAttemptId = (data: any) =>
+    data?.data?._id || data?.data?.attemptId || data?.attemptId || data?.attempt?.id || data?.attempt?._id || data?.id || data?._id || null;
 
-const SUMMARY = {
-  mockName: 'NORCET Mock Test',
-  correctAnswer: 12,
-  penalty: '-39.0',
-  finalScore: '113.0',
-  totalMarks: '360',
-  marksEarned: '+152',
-  allIndiaRank: '#342',
-  attempted: 62,
-  correct: 38,
-  incorrect: 22,
-  skipped: 28,
+const normalizeOption = (option: any, index: number) => {
+    if (typeof option === 'string') return { key: `${index}-${option}`, text: option, value: option };
+    return {
+        key: option?._id || option?.id || option?.value || option?.text || `${index}`,
+        text: option?.text || option?.value || option?.label || `Option ${index + 1}`,
+        value: option?.value || option?.text || option?._id || option?.id || '',
+        isCorrect: option?.isCorrect,
+    };
+};
+
+const isOptionMatch = (option: any, target: any) => {
+    if (target === undefined || target === null || target === '') return false;
+    return [option?.key, option?.value, option?.text, option?.id, option?._id].some(value => value !== undefined && value !== null && String(value) === String(target));
+};
+
+const hasUserAnswered = (item: any) => {
+    const rawAnswer = item?.userAnswer ?? item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.studentAnswer ?? item?.answer;
+    if (Array.isArray(rawAnswer)) return rawAnswer.length > 0;
+    if (typeof rawAnswer === 'string') return rawAnswer.trim() !== '';
+    return rawAnswer !== undefined && rawAnswer !== null && rawAnswer !== '';
+};
+
+const getReviewItems = (resultData: any) => {
+    const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
+    if (!Array.isArray(rawItems)) return [];
+
+    return rawItems.map((item: any, index: number) => {
+        const question = item?.question || item?.questionId || item;
+        const rawOptions = question?.options || question?.choices || item?.options || [];
+        const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, idx: number) => normalizeOption(opt, idx)) : [];
+
+        const selectedRaw = item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.userAnswer ?? item?.studentAnswer ?? item?.answer ?? null;
+        const selectedIndex = item?.selectedAnswer?.index ?? item?.selectedIndex ?? item?.userAnswerIndex ?? null;
+        const correctRaw = item?.correctAnswer?.value ?? item?.correctAnswer?.text ?? item?.correctAnswer ?? question?.correctAnswer?.value ?? question?.correctAnswer?.text ?? question?.correctAnswer ?? null;
+
+        const safeSelectedLabel = typeof selectedRaw === 'object' && selectedRaw !== null ? selectedRaw.value || selectedRaw.text || selectedRaw.label || JSON.stringify(selectedRaw) : selectedRaw;
+        const safeCorrectLabel = typeof correctRaw === 'object' && correctRaw !== null ? correctRaw.value || correctRaw.text || correctRaw.label || JSON.stringify(correctRaw) : correctRaw;
+
+        const resolvedCorrectIndex = options.findIndex(option => option?.isCorrect === true || isOptionMatch(option, correctRaw));
+        const resolvedSelectedIndex = selectedIndex !== null && selectedIndex !== undefined ? Number(selectedIndex) : options.findIndex(option => isOptionMatch(option, selectedRaw));
+
+        const isAnswered = hasUserAnswered(item);
+        let status = 'skipped';
+        if (isAnswered) {
+            status = (item?.isCorrect === true || (resolvedCorrectIndex >= 0 && resolvedSelectedIndex === resolvedCorrectIndex)) ? 'correct' : 'incorrect';
+        }
+
+        return {
+            id: item?._id || question?._id || question?.id || `${index}`,
+            questionNumber: index + 1,
+            questionText: question?.text || question?.question || question?.questionText || item?.questionText || 'Question',
+            options,
+            marksAwarded: item?.marksAwarded ?? 0,
+            questionMarks: question?.marks ?? 0,
+            correctAnswerLabel: safeCorrectLabel,
+            userAnswerLabel: safeSelectedLabel,
+            selectedIndex: resolvedSelectedIndex >= 0 ? resolvedSelectedIndex : null,
+            correctIndex: resolvedCorrectIndex >= 0 ? resolvedCorrectIndex : null,
+            status,
+        };
+    });
+};
+
+const getRawResultItems = (resultData: any) => {
+    const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
+    return Array.isArray(rawItems) ? rawItems : [];
 };
 
 export const ResultScreen = () => {
-  const navigation = useNavigation<any>();
+    const insets = useSafeAreaInsets();
+    const navigation = useNavigation<any>();
+    const route = useRoute<any>();
+    const dispatch = useDispatch();
+    const { testResult, isLoading, submitTestResponse, startTestResponse } = useSelector((state: RootState) => state.MockTestReducer);
+
+    const attemptId = route.params?.attemptId || getAttemptId(submitTestResponse) || getAttemptId(startTestResponse);
+    const routeResultData = route.params?.resultData;
+    const resultData = useMemo(() => routeResultData || testResult?.data || testResult || {}, [routeResultData, testResult]);
+    const resultWhole = resultData;
+
+    useEffect(() => {
+        if (attemptId && !routeResultData) {
+            dispatch(getTestResultRequest({ id: attemptId }));
+        }
+    }, [attemptId, dispatch, routeResultData]);
+
+    const reviewItems = useMemo(() => getReviewItems(resultWhole), [resultWhole]);
+
+    const submitData = submitTestResponse?.data || submitTestResponse || {};
+    const score = route.params?.score ?? resultData?.score ?? resultData?.finalScore ?? resultData?.obtainedMarks ?? submitData?.score ?? 0;
+    const totalMarks = resultData?.maxScore ?? resultData?.maxMarks ?? resultData?.quiz?.totalMarks ?? submitData?.maxScore ?? 0;
+    const rawResultItems = getRawResultItems(resultWhole);
+    const totalQuestionsFromResults = rawResultItems.length || reviewItems.length;
+    const attemptedFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item)).length;
+    const correctFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === true).length;
+    const wrongFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === false).length;
+    const skippedFromUserAnswer = Math.max(totalQuestionsFromResults - attemptedFromUserAnswer, 0);
+
+    const attempted = rawResultItems.length > 0 ? attemptedFromUserAnswer : resultData?.questionCount ?? resultData?.attempted ?? resultData?.stats?.attempted ?? resultData?.results?.length ?? submitData?.answers?.length ?? reviewItems.filter((item: any) => item.status !== 'skipped').length;
+    const correct = rawResultItems.length > 0 ? correctFromUserAnswer : resultData?.correctAnswers ?? resultData?.correct ?? resultData?.stats?.correct ?? reviewItems.filter((item: any) => item.status === 'correct').length;
+    const wrong = rawResultItems.length > 0 ? wrongFromUserAnswer : resultData?.wrongAnswers ?? resultData?.wrong ?? resultData?.stats?.wrong ?? reviewItems.filter((item: any) => item.status === 'incorrect').length;
+    const skipped = rawResultItems.length > 0 ? skippedFromUserAnswer : resultData?.skippedQuestions ?? resultData?.skipped ?? resultData?.stats?.skipped ?? reviewItems.filter((item: any) => item.status === 'skipped').length;
+
+    const rawNegativeMarkingText = reviewItems.some((item: any) => Number(item.marksAwarded) < 0) ? `${Math.min(...reviewItems.map((item: any) => Number(item.marksAwarded) || 0))}` : '0';
+    const negativeMarkingValue = Math.abs(Number(rawNegativeMarkingText));
+    const calculatedPenalty = Number(wrong) * negativeMarkingValue;
+    const penaltyRaw = calculatedPenalty > 0 ? calculatedPenalty : (resultData?.negativeMarks ?? resultData?.penalty ?? resultData?.stats?.penalty ?? 0);
+    const penalty = Number(penaltyRaw).toFixed(2).replace(/\.?0+$/, '');
+
+    const rawCorrectMarkingText = reviewItems.some((item: any) => Number(item.questionMarks) > 0) ? `${Math.max(...reviewItems.map((item: any) => Number(item.questionMarks) || 0))}` : '';
+    const correctMarkingValue = Math.abs(Number(rawCorrectMarkingText));
+    const calculatedEarned = Number(correct) * correctMarkingValue;
+    const earnedRaw = calculatedEarned > 0 ? calculatedEarned : (resultData?.score ?? resultData?.marksEarned ?? resultData?.stats?.earned ?? submitData?.score ?? score);
+    const earned = Number(earnedRaw).toFixed(2).replace(/\.?0+$/, '');
+    
+    const displayScore = Number(score).toFixed(2).replace(/\.?0+$/, '');
+
+    const title = route.params?.title || resultData?.title || resultData?.quiz?.title || startTestResponse?.title || startTestResponse?.quiz?.title || 'Mock Test';
+    const rank = resultData?.rank ?? resultData?.allIndiaRank ?? resultData?.air ?? '-';
+
+    if (isLoading && !reviewItems.length) {
+        return (
+            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+                <View style={styles.loadingCenter}>
+                    <ActivityIndicator size="large" color={theme.colors.primary} />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]} edges={['top', 'left', 'right']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.heroSection}>
+        <LinearGradient colors={HERO_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroSection}>
+          <View style={styles.heroGlowOne} />
+          <View style={styles.heroGlowTwo} />
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity 
+              onPress={() => {
+                dispatch(bootstrapHomeRequest({}));
+                navigation.navigate(ROUTES.BOTTOM_TABS);
+              }} 
+              style={styles.backButton}
+            >
               <Icon name="chevron-back" size={22} color={theme.colors.white} />
             </TouchableOpacity>
             <Text style={styles.heroHeaderTitle}>Your Result</Text>
@@ -65,97 +177,104 @@ export const ResultScreen = () => {
               <Icon name="trophy-outline" size={18} color="#F59E0B" />
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
 
         <View style={styles.contentSection}>
-          <View style={styles.summaryPanel}>
+          <LinearGradient colors={SUMMARY_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.summaryPanel}>
+            <LinearGradient colors={SCORE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.summarySheen} />
             <Text style={styles.summaryCaption}>FINAL SCORE</Text>
-            <Text style={styles.mockNameText}>{SUMMARY.mockName}</Text>
+            <Text style={styles.mockNameText}>{title}</Text>
 
-            <View style={styles.summaryScoreRow}>
-              <Text style={styles.summaryScoreText}>{SUMMARY.finalScore}</Text>
-              <Text style={styles.summaryScoreTotal}>/ {SUMMARY.totalMarks}</Text>
+            <View style={styles.summaryTopRow}>
+              <LinearGradient colors={SCORE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.scoreCircle}>
+                <Text style={styles.summaryScoreText}>{displayScore}</Text>
+                <Text style={styles.summaryScoreTotal}>/ {totalMarks}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_GOLD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.rankBadge}>
+                <Icon name="sparkles" size={14} color="#D97706" />
+                <Text style={styles.rankBadgeText}>Rank {rank}</Text>
+              </LinearGradient>
             </View>
 
             <View style={styles.topMetricRow}>
-              <View style={[styles.topMetricCard, styles.metricGreenCard]}>
-                <Text style={[styles.topMetricValue, styles.metricGreenText]}>{SUMMARY.marksEarned}</Text>
+              <LinearGradient colors={CARD_GREEN_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.topMetricCard, styles.metricGreenCard]}>
+                <Text style={[styles.topMetricValue, styles.metricGreenText]}>+{earned}</Text>
                 <Text style={styles.topMetricLabel}>Marks Earned</Text>
-              </View>
-              <View style={[styles.topMetricCard, styles.metricRedCard]}>
-                <Text style={[styles.topMetricValue, styles.metricRedText]}>{SUMMARY.penalty}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_RED_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.topMetricCard, styles.metricRedCard]}>
+                <Text style={[styles.topMetricValue, styles.metricRedText]}>-{penalty}</Text>
                 <Text style={styles.topMetricLabel}>Penalty</Text>
-              </View>
-              <View style={[styles.topMetricCard, styles.metricBlueCard]}>
-                <Text style={[styles.topMetricValue, styles.metricBlueText]}>{SUMMARY.allIndiaRank}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_BLUE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.topMetricCard, styles.metricBlueCard]}>
+                <Text style={[styles.topMetricValue, styles.metricBlueText]}>{rank}</Text>
                 <Text style={styles.topMetricLabel}>All India Rank</Text>
-              </View>
+              </LinearGradient>
             </View>
 
             <View style={styles.miniStatsRow}>
-              <View style={styles.miniStatCard}>
-                <Text style={styles.miniStatValue}>{SUMMARY.attempted}</Text>
+              <LinearGradient colors={CARD_BLUE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniStatCard}>
+                <Text style={styles.miniStatValue}>{attempted}</Text>
                 <Text style={styles.miniStatLabel}>Attempted</Text>
-              </View>
-              <View style={styles.miniStatCard}>
-                <Text style={[styles.miniStatValue, styles.greenText]}>{SUMMARY.correct}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_GREEN_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniStatCard}>
+                <Text style={[styles.miniStatValue, styles.greenText]}>{correct}</Text>
                 <Text style={styles.miniStatLabel}>Correct</Text>
-              </View>
-              <View style={styles.miniStatCard}>
-                <Text style={[styles.miniStatValue, styles.redText]}>{SUMMARY.incorrect}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_RED_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniStatCard}>
+                <Text style={[styles.miniStatValue, styles.redText]}>{wrong}</Text>
                 <Text style={styles.miniStatLabel}>Wrong</Text>
-              </View>
-              <View style={styles.miniStatCard}>
-                <Text style={[styles.miniStatValue, styles.orangeText]}>{SUMMARY.skipped}</Text>
+              </LinearGradient>
+              <LinearGradient colors={CARD_GOLD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniStatCard}>
+                <Text style={[styles.miniStatValue, styles.orangeText]}>{skipped}</Text>
                 <Text style={styles.miniStatLabel}>Skipped</Text>
-              </View>
+              </LinearGradient>
             </View>
 
-            <View style={styles.breakdownCard}>
+            <LinearGradient colors={CARD_BLUE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.breakdownCard}>
               <Text style={styles.breakdownTitle}>Negative Marking Breakdown</Text>
               <View style={styles.breakdownRow}>
                 <View>
-                  <Text style={styles.breakdownRowTitle}>Wrong (-0.25 each)</Text>
-                  <Text style={styles.breakdownRowSub}>14 questions</Text>
+                  <Text style={styles.breakdownRowTitle}>Wrong Penalty</Text>
+                  <Text style={styles.breakdownRowSub}>{wrong} questions (-{negativeMarkingValue} each)</Text>
                 </View>
-                <Text style={[styles.breakdownValue, styles.redText]}>-35.0</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <View>
-                  <Text style={styles.breakdownRowTitle}>Wrong (-0.5 each)</Text>
-                  <Text style={styles.breakdownRowSub}>8 questions</Text>
-                </View>
-                <Text style={[styles.breakdownValue, styles.orangeText]}>-4.0</Text>
+                <Text style={[styles.breakdownValue, styles.redText]}>-{penalty}</Text>
               </View>
               <View style={styles.breakdownRow}>
                 <View>
                   <Text style={styles.breakdownRowTitle}>Skipped (0 penalty)</Text>
-                  <Text style={styles.breakdownRowSub}>{SUMMARY.skipped} questions</Text>
+                  <Text style={styles.breakdownRowSub}>{skipped} questions</Text>
                 </View>
                 <Text style={styles.breakdownValue}>0</Text>
               </View>
               <View style={[styles.breakdownRow, styles.breakdownTotalRow]}>
                 <Text style={styles.breakdownTotalLabel}>Total Penalty</Text>
-                <Text style={[styles.breakdownTotalValue, styles.redText]}>{SUMMARY.penalty}</Text>
+                <Text style={[styles.breakdownTotalValue, styles.redText]}>-{penalty}</Text>
               </View>
-            </View>
-          </View>
+            </LinearGradient>
+          </LinearGradient>
 
           <View style={styles.noticeWrap}>
             <SecurityNotice text="Result review is protected. Screenshots, recording, PDF download and sharing are disabled." />
           </View>
 
-          <View style={styles.reviewCard}>
-            <Text style={styles.reviewTitle}>Question Review</Text>
+          <LinearGradient colors={SUMMARY_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.reviewCard}>
+            <View style={styles.reviewCardHeader}>
+              <Text style={styles.reviewTitle}>Question Review</Text>
+              <View style={styles.reviewCountPill}>
+                <Text style={styles.reviewCountText}>{reviewItems.length} items</Text>
+              </View>
+            </View>
 
-            {RESULT_QUESTIONS.map(item => {
+            {reviewItems.map((item: any) => {
               const isCorrect = item.status === 'correct';
               const isSkipped = item.status === 'skipped';
               const isIncorrect = item.status === 'incorrect';
 
               return (
-                <View
-                  key={item.id}
+                <LinearGradient
+                  colors={isCorrect ? ['rgba(220,252,231,0.95)', 'rgba(240,253,244,0.98)'] : isSkipped ? ['rgba(254,249,195,0.9)', 'rgba(255,251,235,0.98)'] : ['rgba(254,226,226,0.95)', 'rgba(255,241,242,0.98)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={[
                     styles.questionItem,
                     isCorrect && styles.questionItemCorrect,
@@ -163,8 +282,19 @@ export const ResultScreen = () => {
                     isIncorrect && styles.questionItemIncorrect,
                   ]}
                 >
-                  <View style={styles.questionTopRow}>
-                    <Text style={styles.questionNumber}>Q{item.questionNumber}</Text>
+                  <View
+                    style={[
+                      styles.questionAccent,
+                      isCorrect && styles.questionAccentCorrect,
+                      isSkipped && styles.questionAccentSkipped,
+                      isIncorrect && styles.questionAccentIncorrect,
+                    ]}
+                  />
+                  <View key={item.id} style={styles.questionBody}>
+                    <View style={styles.questionTopRow}>
+                    <View style={styles.questionTag}>
+                      <Text style={styles.questionNumber}>Q{item.questionNumber}</Text>
+                    </View>
                     <Text
                       style={[
                         styles.markValue,
@@ -173,81 +303,81 @@ export const ResultScreen = () => {
                         isIncorrect && styles.markValueIncorrect,
                       ]}
                     >
-                      {item.marks}
+                      {item.marksAwarded}
                     </Text>
-                  </View>
+                    </View>
 
-                  <Text style={styles.questionText}>{item.question}</Text>
+                    <Text style={styles.questionText}>{item.questionText}</Text>
 
-                  <View style={styles.optionsWrap}>
-                    {item.options.map((option, index) => {
-                      const optionId = ['A', 'B', 'C', 'D'][index];
-                      const isRightAnswer = optionId === item.correctAnswer;
-                      const isChosenWrong = optionId === item.selectedAnswer && item.status === 'incorrect';
-                      const isChosenCorrect = optionId === item.selectedAnswer && item.status === 'correct';
+                    <View style={styles.optionsWrap}>
+                      {item.options.map((option: any, index: number) => {
+                        const isRightAnswer = index === item.correctIndex;
+                        const isChosenWrong = index === item.selectedIndex && item.status === 'incorrect';
+                        const isChosenCorrect = index === item.selectedIndex && item.status === 'correct';
 
-                      return (
-                        <View
-                          key={`${item.id}-${optionId}`}
-                          style={[
-                            styles.optionItem,
-                            isRightAnswer && styles.optionItemCorrect,
-                            isChosenWrong && styles.optionItemIncorrect,
-                            isChosenCorrect && styles.optionItemCorrect,
-                          ]}
-                        >
-                          <Text
+                        return (
+                          <View
+                            key={`${item.id}-${index}`}
                             style={[
-                              styles.optionKey,
-                              isRightAnswer && styles.optionKeyCorrect,
-                              isChosenWrong && styles.optionKeyIncorrect,
+                              styles.optionItem,
+                              isRightAnswer && styles.optionItemCorrect,
+                              isChosenWrong && styles.optionItemIncorrect,
+                              isChosenCorrect && styles.optionItemCorrect,
                             ]}
                           >
-                            {optionId}.
-                          </Text>
-                          <Text
-                            style={[
-                              styles.optionReviewText,
-                              isRightAnswer && styles.optionReviewTextCorrect,
-                              isChosenWrong && styles.optionReviewTextIncorrect,
-                            ]}
-                          >
-                            {option}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                            <Text
+                              style={[
+                                styles.optionKey,
+                                isRightAnswer && styles.optionKeyCorrect,
+                                isChosenWrong && styles.optionKeyIncorrect,
+                              ]}
+                            >
+                              {['A', 'B', 'C', 'D', 'E', 'F'][index] || index + 1}.
+                            </Text>
+                            <Text
+                              style={[
+                                styles.optionReviewText,
+                                isRightAnswer && styles.optionReviewTextCorrect,
+                                isChosenWrong && styles.optionReviewTextIncorrect,
+                              ]}
+                            >
+                              {option.text}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {isCorrect ? (
+                      <View style={styles.answerRow}>
+                        <Text style={styles.answerLabel}>Your Answer:</Text>
+                        <Text style={styles.answerValueCorrect}>{item.userAnswerLabel || item.correctAnswerLabel || 'Matched'}</Text>
+                      </View>
+                    ) : null}
+
+                    {isSkipped ? (
+                      <View style={styles.answerRow}>
+                        <Text style={styles.answerLabel}>Status:</Text>
+                        <Text style={styles.answerValueSkipped}>Not Answered</Text>
+                      </View>
+                    ) : null}
+
+                    {isIncorrect ? (
+                      <View style={styles.answerRow}>
+                        <Text style={styles.answerLabel}>Your Answer:</Text>
+                        <Text style={styles.answerValueIncorrect}>{item.userAnswerLabel || 'Unknown'}</Text>
+                      </View>
+                    ) : null}
+
+                    <View style={styles.answerRow}>
+                      <Text style={styles.answerLabel}>Answer Key:</Text>
+                      <Text style={styles.answerValueCorrect}>{item.correctAnswerLabel || 'Unknown'}</Text>
+                    </View>
                   </View>
-
-                  {isCorrect ? (
-                    <View style={styles.answerRow}>
-                      <Text style={styles.answerLabel}>Your Answer:</Text>
-                      <Text style={styles.answerValueCorrect}>{item.selectedAnswer} Matched</Text>
-                    </View>
-                  ) : null}
-
-                  {isSkipped ? (
-                    <View style={styles.answerRow}>
-                      <Text style={styles.answerLabel}>Status:</Text>
-                      <Text style={styles.answerValueSkipped}>Not Answered</Text>
-                    </View>
-                  ) : null}
-
-                  {isIncorrect ? (
-                    <View style={styles.answerRow}>
-                      <Text style={styles.answerLabel}>Your Answer:</Text>
-                      <Text style={styles.answerValueIncorrect}>{item.selectedAnswer}</Text>
-                    </View>
-                  ) : null}
-
-                  <View style={styles.answerRow}>
-                    <Text style={styles.answerLabel}>Answer Key:</Text>
-                    <Text style={styles.answerValueCorrect}>{item.correctAnswer}</Text>
-                  </View>
-                </View>
+                </LinearGradient>
               );
             })}
-          </View>
+          </LinearGradient>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -259,6 +389,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FAFCFF',
   },
+  loadingCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: {
     paddingBottom: 32,
   },
@@ -267,6 +402,24 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 18,
     overflow: 'hidden',
+  },
+  heroGlowOne: {
+    position: 'absolute',
+    top: -30,
+    right: -20,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  heroGlowTwo: {
+    position: 'absolute',
+    bottom: -40,
+    left: -25,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   header: {
     flexDirection: 'row',
@@ -299,24 +452,79 @@ const styles = StyleSheet.create({
     marginTop: -6,
   },
   summaryPanel: {
-    backgroundColor: theme.colors.white,
     borderRadius: 18,
     padding: 14,
-    shadowColor: '#B5CAE6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.14)',
+    // shadowColor: '#0F172A',
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.12,
+    // shadowRadius: 16,
+    elevation: 4,
     marginBottom: 16,
+    // overflow: 'hidden',
+    // position: 'relative',
+  },
+  summarySheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '42%',
+    opacity: 0.25,
+  },
+  summaryTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 14,
+  },
+  summaryTitleBlock: {
+    flex: 1,
+  },
+  scoreCircle: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
+    // shadowColor: '#0F172A',
+    // shadowOffset: { width: 0, height: 8 },
+    // shadowOpacity: 0.18,
+    // shadowRadius: 14,
+    // elevation: 4,
+  },
+  rankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.18)',
+  },
+  rankBadgeText: {
+    color: '#92400E',
+    fontFamily: Fonts.interbold,
+    fontSize: 11,
+    fontWeight: '700',
   },
   noticeWrap: {
     marginBottom: 16,
   },
   summaryCaption: {
-    color: '#94A3B8',
-    fontFamily: Fonts.intersemibold,
-    fontSize: 10,
+    color: '#1105ef',
+    fontFamily: Fonts.interbold,
+    fontSize: 14,
     marginBottom: 4,
+    fontWeight:'bold'
   },
   mockNameText: {
     color: theme.colors.text,
@@ -336,8 +544,8 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   summaryScoreTotal: {
-    color: theme.colors.textLight,
-    fontFamily: Fonts.intermedium,
+    color: "#000000",
+    fontFamily: Fonts.interbold,
     fontSize: 18,
     marginLeft: 4,
     marginBottom: 4,
@@ -350,10 +558,11 @@ const styles = StyleSheet.create({
   },
   topMetricCard: {
     flex: 1,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 8,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   metricGreenCard: {
     backgroundColor: '#ECFDF5',
@@ -384,12 +593,10 @@ const styles = StyleSheet.create({
   },
   miniStatCard: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 14,
     paddingVertical: 10,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#EEF4FB',
+    overflow: 'hidden',
   },
   miniStatValue: {
     color: theme.colors.text,
@@ -404,10 +611,12 @@ const styles = StyleSheet.create({
   },
   breakdownCard: {
     borderRadius: 14,
-    backgroundColor: '#FAFCFF',
-    borderWidth: 1,
-    borderColor: '#EEF4FB',
     overflow: 'hidden',
+    // shadowColor: '#0F172A',
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 10,
+    // elevation: 2,
   },
   breakdownTitle: {
     color: theme.colors.text,
@@ -477,38 +686,81 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   reviewCard: {
-    backgroundColor: theme.colors.white,
     borderRadius: 18,
     padding: 16,
-    shadowColor: '#B5CAE6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    // shadowColor: '#0F172A',
+    // shadowOffset: { width: 0, height: 4 },
+    // shadowOpacity: 0.08,
+    // shadowRadius: 12,
+    // elevation: 3,
+    overflow: 'hidden',
+  },
+  reviewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
   reviewTitle: {
     color: theme.colors.text,
     fontFamily: Fonts.interbold,
     fontSize: 17,
     fontWeight: '700',
-    marginBottom: 14,
+  },
+  reviewCountPill: {
+    backgroundColor: 'rgba(11, 95, 168, 0.08)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  reviewCountText: {
+    color: theme.colors.primary,
+    fontFamily: Fonts.interbold,
+    fontSize: 11,
+    fontWeight: '700',
   },
   questionItem: {
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  questionAccent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+  },
+  questionAccentCorrect: {
+    backgroundColor: '#22C55E',
+  },
+  questionAccentSkipped: {
+    backgroundColor: '#F59E0B',
+  },
+  questionAccentIncorrect: {
+    backgroundColor: '#EF4444',
+  },
+  questionBody: {
+    gap: 0,
+  },
+  questionTag: {
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: REVIEW_BORDER,
   },
   questionItemCorrect: {
-    backgroundColor: '#F0FDF4',
     borderColor: '#86EFAC',
   },
   questionItemSkipped: {
-    backgroundColor: '#FFFBEA',
     borderColor: '#FCD34D',
   },
   questionItemIncorrect: {
-    backgroundColor: '#FEF2F2',
     borderColor: '#FCA5A5',
   },
   questionTopRow: {

@@ -54,12 +54,12 @@ export const MOCK_CHALLENGES = [
 ];
 
 export const QUICK_ACTIONS = [
-  { id: '1', title: 'Rapid Revision', icon: 'flash', route: 'RapidRevision' },
-  { id: '2', title: 'Question Bank', icon: 'book', route: 'QuestionBank' },
-  { id: '3', title: 'Subject Tests', icon: 'flask', route: 'SubjectTests' },
-  { id: '4', title: 'Daily Test', icon: 'calendar', route: 'MockTests' },
-  { id: '5', title: 'Mock Test', icon: 'ribbon', route: 'MockTests' },
-  { id: '6', title: 'PYQ Papers', icon: 'document-text', route: 'PYQ' },
+  { id: '1', title: 'Rapid Revision', icon: 'flash', route: 'RapidRevisionScreen' },
+  { id: '2', title: 'Question Bank', icon: 'book', route: 'QuestionBankScreen' },
+  { id: '3', title: 'Subject Tests', icon: 'flask', route: 'SubjectTestsScreen' },
+  { id: '4', title: 'Daily Test', icon: 'calendar', route: 'MockTestsScreen' },
+  { id: '5', title: 'Mock Test', icon: 'ribbon', route: 'MockTestsScreen' },
+  { id: '6', title: 'PYQ Papers', icon: 'document-text', route: 'PYQScreen' },
 ];
 
 export const QUESTION_BANK_CATEGORIES = [
@@ -68,6 +68,7 @@ export const QUESTION_BANK_CATEGORIES = [
   { id: '3', title: 'Important Qs', count: '850 Questions', icon: 'star', accent: '#FFB648', exams: ['NORCET', 'RRB', 'DSSSB'] },
   { id: '4', title: 'Frequently Asked', count: '640 Questions', icon: 'time', accent: '#B27EFF', exams: ['GNM', 'B.Sc Nursing', 'PGIMER'] },
   { id: '5', title: 'Previous Year', count: '3.2K Questions', icon: 'document-text', accent: '#FF7A7A', exams: ['All', ...EXAM_CATEGORIES] },
+  { id: '6', title: 'NORCET Dhamaka', count: '1.2K Questions', icon: 'ribbon', accent: '#F97316', exams: ['NORCET'] },
 ];
 
 export const PREVIOUS_YEAR_YEARS = ['2024', '2023', '2022', '2021', '2020'];

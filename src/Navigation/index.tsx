@@ -4,12 +4,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthStack } from './AuthStack';
 import { MainStack } from './MainStack';
 import { ROUTES } from './RouteNames';
+import { navigationRef } from './NavigationService';
 
 const RootStack = createNativeStackNavigator();
 
 export const RootNavigator = () => {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName={ROUTES.AUTH_STACK}>
         <RootStack.Screen name={ROUTES.AUTH_STACK} component={AuthStack} />
         <RootStack.Screen name={ROUTES.MAIN_STACK} component={MainStack} />

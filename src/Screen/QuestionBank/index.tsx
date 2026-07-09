@@ -6,9 +6,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Fonts, theme } from '../../Themes';
 import { Header } from '../../Components/headers/Header';
 import { Input } from '../../Components/inputs/Input';
-import { QUESTION_BANK_CATEGORIES, EXAM_CATEGORIES, SUBJECT_TESTS } from '../../Constants/dummyData';
+import { QUESTION_BANK_CATEGORIES, SUBJECT_TESTS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
 
+
+const isNorcertDhmakaLabel = (value: string = '') => /norcert\s*(dhamaka|dhmaka)/i.test(String(value || '').trim());
 export const QuestionBankScreen = () => {
   const navigation = useNavigation<any>();
   const [selectedExam, setSelectedExam] = useState('All');
@@ -28,8 +30,18 @@ export const QuestionBankScreen = () => {
     []
   );
 
+  const categoryExamItems = useMemo(
+    () => QUESTION_BANK_CATEGORIES,
+    []
+  );
+
+  const subjectModeItems = useMemo(
+    () => subjectItems.filter(item => !isNorcertDhmakaLabel(item.title)),
+    [subjectItems]
+  );
+
   const listData = useMemo(() => {
-    const source = selectedMode === 'category' ? QUESTION_BANK_CATEGORIES : subjectItems;
+    const source = selectedMode === 'category' ? categoryExamItems : subjectModeItems;
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return source.filter(item => {
@@ -44,12 +56,12 @@ export const QuestionBankScreen = () => {
 
       return matchesExam && matchesSearch;
     });
-  }, [searchQuery, selectedExam, selectedMode, subjectItems]);
+  }, [searchQuery, selectedExam, selectedMode, categoryExamItems, subjectModeItems]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.headerBackground}>
-        <Header title="Question Bank" rightIcon="options-outline" light style={styles.header} />
+        <Header title="Q.Bank" rightIcon="options-outline" light style={styles.header} />
 
         <View style={styles.searchWrap}>
           <Input
@@ -67,29 +79,12 @@ export const QuestionBankScreen = () => {
       <FlatList
         ListHeaderComponent={
           <>
-            <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={['All', ...EXAM_CATEGORIES]}
-              keyExtractor={item => item}
-              contentContainerStyle={styles.filterList}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.filterChip, selectedExam === item && styles.activeFilterChip]}
-                  activeOpacity={0.85}
-                  onPress={() => setSelectedExam(item)}
-                >
-                  <Text style={[styles.filterText, selectedExam === item && styles.activeFilterText]}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
-
             <View style={styles.segmentedControl}>
               <TouchableOpacity
                 style={[styles.segmentButton, selectedMode === 'category' && styles.segmentButtonActive]}
                 onPress={() => setSelectedMode('category')}
               >
-                <Text style={[styles.segmentText, selectedMode === 'category' && styles.segmentTextActive]}>By Category</Text>
+                <Text style={[styles.segmentText, selectedMode === 'category' && styles.segmentTextActive]}>By Category Exam</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.segmentButton, selectedMode === 'subject' && styles.segmentButtonActive]}
@@ -144,13 +139,13 @@ const styles = StyleSheet.create({
   },
   headerBackground: {
     backgroundColor: theme.colors.primary,
-    paddingBottom: 16,
+    paddingBottom: 0,
   },
   header: {
     backgroundColor: 'transparent',
   },
   searchWrap: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     marginTop: 4,
   },
   zeroMargin: {
@@ -164,7 +159,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   filterList: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
     paddingTop: 14,
     gap: 10,
   },

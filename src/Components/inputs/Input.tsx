@@ -14,11 +14,13 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { Fonts, theme } from '../../Themes';
 
 interface InputProps extends TextInputProps {
-  label: string;
+  label?: string;
   error?: string;
   leftIcon?: string;
   isPassword?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
+  inputContainerStyle?: StyleProp<ViewStyle>;
+  inputStyle?: StyleProp<TextStyle>;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -27,20 +29,24 @@ export const Input: React.FC<InputProps> = ({
   leftIcon,
   isPassword = false,
   containerStyle,
+  inputContainerStyle,
+  inputStyle,
   value,
   ...props
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const currentBorderColor = isFocused ? (theme.colors.primary || '#4F46E5') : '#E2E8F0';
+  const currentBorderColor = error ? (theme.colors.error || '#EF4444') : isFocused ? (theme.colors.primary || '#4F46E5') : '#E2E8F0';
   const currentBackgroundColor = isFocused ? (theme.colors.surface || '#FFFFFF') : '#F8FAFC';
 
   return (
     <View style={[styles.container, containerStyle]}>
-      <Text style={[styles.label, { color: isFocused ? (theme.colors.primary || '#4F46E5') : '#64748B' }]}>
-        {label}
-      </Text>
+      {!!label && (
+        <Text style={[styles.label, { color: isFocused ? (theme.colors.primary || '#4F46E5') : '#64748B' }]}>
+          {label}
+        </Text>
+      )}
       
       <View style={[
           styles.inputContainer,
@@ -58,10 +64,10 @@ export const Input: React.FC<InputProps> = ({
         
         <View style={styles.inputWrapper}>
           <TextInput
-            style={styles.input}
+            style={[styles.input, inputStyle]}
             placeholderTextColor={theme.colors.textLight}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            onFocus={(e) => { setIsFocused(true); props.onFocus && props.onFocus(e); }}
+            onBlur={(e) => { setIsFocused(false); props.onBlur && props.onBlur(e); }}
             secureTextEntry={isPassword && !showPassword}
             value={value}
             {...props}
@@ -89,10 +95,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontFamily: Fonts.intersemibold,
+    fontFamily: Fonts.interbold,
     fontSize: 14,
     marginBottom: 6,
     marginLeft: 4,
+    fontWeight: "bold"
   },
   inputContainer: {
     flexDirection: 'row',

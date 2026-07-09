@@ -11,7 +11,7 @@ import {
   View
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { Fonts, theme } from '../../Themes';
+import { Colorpath, Fonts, theme } from '../../Themes';
 
 interface ButtonProps {
   title: string;
@@ -87,7 +87,7 @@ export const Button: React.FC<ButtonProps> = ({
       >
         {isPrimary && !disabled && !isOutline && !isGhost ? (
           <LinearGradient
-            colors={[theme.colors.primary, theme.colors.primaryDark]}
+           colors={[Colorpath.TextSecondary, theme.colors.primary]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.gradientContainer}

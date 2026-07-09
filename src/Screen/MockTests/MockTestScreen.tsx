@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Dimensions,
   Modal,
+  Pressable,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -12,9 +14,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { Fonts } from '../../Themes';
+import { Fonts, theme, Colorpath } from '../../Themes';
 import { ROUTES } from '../../Navigation/RouteNames';
-import { SecurityNotice } from '../../Components/security/SecurityNotice';
+import { normalize, verticalScale } from '../../Utils/Helpers/normalize';
+
+const { height } = Dimensions.get('window');
 
 const QUESTION_TEMPLATES = [
   {
@@ -94,9 +98,9 @@ export const MockTestScreen = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
   const [skippedQuestions, setSkippedQuestions] = useState<number[]>([]);
+  const [reviewed, setReviewed] = useState<Set<number>>(new Set());
   const [remainingSeconds, setRemainingSeconds] = useState(50 * 60);
   const [showPalette, setShowPalette] = useState(false);
-  const dotsAnimation = useRef(new Animated.Value(0)).current;
 
   const currentQuestion = MOCK_QUESTIONS[currentIndex];
 
@@ -110,42 +114,12 @@ export const MockTestScreen = () => {
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(dotsAnimation, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      })
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [dotsAnimation]);
 
   const answeredCount = Object.keys(selectedAnswers).length;
   const skippedCount = skippedQuestions.length;
   const remainingCount = MOCK_QUESTIONS.length - answeredCount - skippedCount;
-
-  const progressPercent = ((currentIndex + 1) / MOCK_QUESTIONS.length) * 100;
-
-  const paletteItems = useMemo(
-    () =>
-      MOCK_QUESTIONS.map((item, index) => {
-        const answered = !!selectedAnswers[item.questionNumber];
-        const skipped = skippedQuestions.includes(item.questionNumber);
-        return {
-          number: item.questionNumber,
-          active: index === currentIndex,
-          answered,
-          skipped,
-        };
-      }),
-    [currentIndex, selectedAnswers, skippedQuestions]
-  );
 
   const selectAnswer = (answerId: string) => {
     setSelectedAnswers(prev => ({ ...prev, [currentQuestion.questionNumber]: answerId }));
@@ -187,127 +161,102 @@ export const MockTestScreen = () => {
     setCurrentIndex(prev => prev + 1);
   };
 
-  const dotOpacities = [0, 1, 2, 3].map(index =>
-    dotsAnimation.interpolate({
-      inputRange: [0, 0.25, 0.5, 0.75, 1],
-      outputRange:
-        index === 0
-          ? [0.35, 1, 0.35, 0.35, 0.35]
-          : index === 1
-            ? [0.35, 0.35, 1, 0.35, 0.35]
-            : index === 2
-              ? [0.35, 0.35, 0.35, 1, 0.35]
-              : [0.35, 0.35, 0.35, 0.35, 1],
-    })
-  );
+  const toggleReview = () => {
+    const newReview = new Set(reviewed);
+    if (newReview.has(currentQuestion.questionNumber)) {
+      newReview.delete(currentQuestion.questionNumber);
+    } else {
+      newReview.add(currentQuestion.questionNumber);
+    }
+    setReviewed(newReview);
+  };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={styles.container}>
+      <StatusBar backgroundColor="#F8FAFC" barStyle="dark-content" />
 
-      <View style={styles.header}>
-        <View style={styles.timerWrap}>
-          <Icon name="time-outline" size={18} color="#00B4A2" />
-          <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
+      <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
+        <View style={styles.topBar}>
+          <Pressable onPress={() => navigation.goBack()} style={styles.iconButton}>
+            <Icon name="arrow-back" size={normalize(24)} color={theme.colors.text} />
+          </Pressable>
+          <Text style={styles.headerTitle} numberOfLines={1}>NORCET Mock Test</Text>
+          <Pressable style={styles.jumpIconButton} onPress={() => setShowPalette(!showPalette)}>
+            <Icon name="grid-outline" size={normalize(22)} color={theme.colors.primary} />
+          </Pressable>
         </View>
+      </SafeAreaView>
 
-        <Text style={styles.testName} numberOfLines={1}>
-          NORCET Mock Test
-        </Text>
-
-        <TouchableOpacity style={styles.jumpWrap} activeOpacity={0.85} onPress={() => setShowPalette(true)}>
-          <Text style={styles.jumpText}>Jump</Text>
-          <View style={styles.dotsWrap}>
-            {dotOpacities.map((opacity, index) => (
-              <Animated.View key={index} style={[styles.dot, { opacity }]} />
-            ))}
+      <View style={styles.subHeader}>
+        <View style={styles.subHeaderLeft}>
+          <View style={styles.qCountBadge}>
+            <Text style={styles.qCountText}>Q {currentIndex + 1} / {MOCK_QUESTIONS.length}</Text>
           </View>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTopRow}>
-          <Text style={styles.questionCounter}>
-            Question <Text style={styles.counterBold}>{currentQuestion.questionNumber}</Text> of{' '}
-            <Text style={styles.counterBold}>{MOCK_QUESTIONS.length}</Text>
-          </Text>
-          <TouchableOpacity style={styles.jumpIconButton} onPress={() => setShowPalette(true)}>
-            <Icon name="grid-outline" size={18} color="#475569" />
-          </TouchableOpacity>
+          <View style={styles.syncBadge}>
+            <View style={styles.syncDot} />
+            <Text style={styles.syncText}>Offline mode</Text>
+          </View>
         </View>
-
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-        </View>
-
-        <View style={styles.statsRow}>
-          <Text style={styles.statAnswered}>Answered {answeredCount}</Text>
-          <Text style={styles.statSkipped}>Skipped {skippedCount}</Text>
-          <Text style={styles.statRemaining}>Remaining {remainingCount}</Text>
+        <View style={styles.timerBadge}>
+          <Icon name="time-outline" size={normalize(16)} color="#FFFFFF" />
+          <Text style={styles.timerText}>{formatTime(remainingSeconds)}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.securityNotice}>
-          <SecurityNotice text="Mock test screen is protected. Screenshots, recording, PDF download and sharing are disabled." />
-        </View>
+        <View style={styles.questionSection}>
+          <Text style={styles.questionText}>
+            {currentQuestion.questionNumber}. {currentQuestion.question}
+          </Text>
 
-        <View style={styles.tagsRow}>
-          <View style={styles.tagGreen}>
-            <Text style={styles.tagGreenText}>{currentQuestion.subject}</Text>
+          <View style={styles.optionsContainer}>
+            {currentQuestion.options.map((opt) => {
+              const isSelected = selectedAnswers[currentQuestion.questionNumber] === opt.id;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={[styles.optionContainer, isSelected && styles.optionSelected]}
+                  onPress={() => selectAnswer(opt.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.optionLetter, isSelected && styles.optionLetterSelected]}>{opt.id}.</Text>
+                  <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>{opt.text}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <View style={styles.tagYellow}>
-            <Text style={styles.tagYellowText}>{currentQuestion.penalty}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.questionText}>
-          Q{currentQuestion.questionNumber}. {currentQuestion.question}
-        </Text>
-
-        <View style={styles.optionsWrap}>
-          {currentQuestion.options.map(opt => {
-            const isSelected = selectedAnswers[currentQuestion.questionNumber] === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                style={[styles.optionCard, isSelected && styles.selectedOptionCard]}
-                onPress={() => selectAnswer(opt.id)}
-                activeOpacity={0.82}
-              >
-                <View style={[styles.optionLetter, isSelected && styles.selectedOptionLetter]}>
-                  <Text style={[styles.optionLetterText, isSelected && styles.selectedOptionLetterText]}>{opt.id}</Text>
-                </View>
-                <Text style={[styles.optionText, isSelected && styles.selectedOptionText]}>{opt.text}</Text>
-              </TouchableOpacity>
-            );
-          })}
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navButtonSecondary} onPress={handlePrevious}>
-          <Text style={styles.navButtonTextSecondary}>‹ Previous</Text>
+      <View style={styles.bottomBar}>
+        <TouchableOpacity style={styles.prevButton} onPress={handlePrevious}>
+          <Icon name="chevron-back" size={normalize(20)} color={theme.colors.text} />
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Text style={styles.skipButtonText}>Skip</Text>
+        <TouchableOpacity
+          style={[styles.reviewButton, reviewed.has(currentQuestion.questionNumber) && styles.reviewButtonActive]}
+          onPress={toggleReview}
+        >
+          <Icon name={reviewed.has(currentQuestion.questionNumber) ? "bookmark" : "bookmark-outline"} size={normalize(18)} color={reviewed.has(currentQuestion.questionNumber) ? '#FFFFFF' : '#D97706'} style={styles.reviewIcon} />
+          <Text style={[styles.reviewButtonText, reviewed.has(currentQuestion.questionNumber) && styles.reviewButtonTextActive]}>
+            Review
+          </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navButtonPrimary} onPress={handleNext}>
-          <Text style={styles.navButtonTextPrimary}>{currentIndex === MOCK_QUESTIONS.length - 1 ? 'Finish' : 'Next ›'}</Text>
+        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+          <Text style={styles.nextButtonText}>{currentIndex === MOCK_QUESTIONS.length - 1 ? 'Finish' : 'Save & Next'}</Text>
+          <Icon name={currentIndex === MOCK_QUESTIONS.length - 1 ? 'checkmark' : 'chevron-forward'} size={normalize(18)} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
 
       <Modal visible={showPalette} transparent animationType="slide" onRequestClose={() => setShowPalette(false)}>
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.overlayDismiss} activeOpacity={1} onPress={() => setShowPalette(false)} />
-          <View style={styles.paletteSheet}>
+        <View style={styles.paletteOverlay}>
+          <Pressable style={styles.paletteBg} onPress={() => setShowPalette(false)} />
+          <View style={styles.paletteContainer}>
+            <View style={styles.paletteDragBar} />
             <View style={styles.paletteHeader}>
               <Text style={styles.paletteTitle}>Question Palette</Text>
-              <TouchableOpacity onPress={() => setShowPalette(false)}>
-                <Icon name="close" size={22} color="#1E293B" />
-              </TouchableOpacity>
+              <Pressable onPress={() => setShowPalette(false)} style={styles.closeBtn}>
+                <Icon name="close" size={normalize(24)} color={theme.colors.text} />
+              </Pressable>
             </View>
 
             <View style={styles.paletteStats}>
@@ -316,423 +265,159 @@ export const MockTestScreen = () => {
               <Text style={styles.paletteStatText}>Remaining: {remainingCount}</Text>
             </View>
 
-            <View style={styles.legendRow}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#00B4A2' }]} />
-                <Text style={styles.legendText}>Answered</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#F59E0B' }]} />
-                <Text style={styles.legendText}>Skipped</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#D9E4F0' }]} />
-                <Text style={styles.legendText}>Pending</Text>
-              </View>
-            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.gridContainer}>
+                {MOCK_QUESTIONS.map((q) => {
+                  const index = q.questionNumber - 1;
+                  const hasAnswer = !!selectedAnswers[q.questionNumber];
+                  const isSkipped = skippedQuestions.includes(q.questionNumber);
+                  const isReview = reviewed.has(q.questionNumber);
+                  const isCurrent = index === currentIndex;
 
-            <ScrollView contentContainerStyle={styles.paletteGrid}>
-              {paletteItems.map(item => (
-                <TouchableOpacity
-                  key={item.number}
-                  style={[
-                    styles.paletteButton,
-                    item.answered && styles.paletteButtonAnswered,
-                    item.skipped && styles.paletteButtonSkipped,
-                    item.active && styles.paletteButtonActive,
-                  ]}
-                  onPress={() => jumpToQuestion(item.number)}
-                >
-                  <Text
-                    style={[
-                      styles.paletteButtonText,
-                      item.answered && styles.paletteButtonTextDark,
-                      item.skipped && styles.paletteButtonTextDark,
-                      item.active && styles.paletteButtonTextActive,
-                    ]}
-                  >
-                    {item.number}
-                  </Text>
+                  let boxStyle: any = styles.gridBox;
+                  let textStyle: any = styles.gridText;
+
+                  if (isCurrent) {
+                    boxStyle = { ...boxStyle, ...styles.gridCurrent };
+                    textStyle = { ...textStyle, ...styles.gridTextCurrent };
+                  } else if (hasAnswer && isReview) {
+                    boxStyle = { ...boxStyle, ...styles.gridAnsweredMarked };
+                    textStyle = { ...textStyle, ...styles.gridTextAnswered };
+                  } else if (isReview) {
+                    boxStyle = { ...boxStyle, ...styles.gridReview };
+                    textStyle = { ...textStyle, ...styles.gridTextReview };
+                  } else if (hasAnswer) {
+                    boxStyle = { ...boxStyle, ...styles.gridAnswered };
+                    textStyle = { ...textStyle, ...styles.gridTextAnswered };
+                  } else if (isSkipped) {
+                    boxStyle = { ...boxStyle, ...styles.gridSkipped };
+                    textStyle = { ...textStyle, ...styles.gridTextSkipped };
+                  }
+
+                  return (
+                    <Pressable
+                      key={q.questionNumber}
+                      style={boxStyle}
+                      onPress={() => jumpToQuestion(q.questionNumber)}
+                    >
+                      <Text style={textStyle}>{q.questionNumber}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <View style={styles.paletteLegend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#10B981', borderColor: '#10B981' }]} />
+                  <Text style={styles.legendText}>Answered</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#F1F5F9' }]} />
+                  <Text style={styles.legendText}>Skipped</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#F8FAFC' }]} />
+                  <Text style={styles.legendText}>Unanswered</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: '#FEF3C7', borderColor: '#F59E0B' }]} />
+                  <Text style={styles.legendText}>Marked for Review</Text>
+                </View>
+              </View>
+
+              <View style={styles.paletteFooter}>
+                <TouchableOpacity style={styles.footerBtnOutline} onPress={() => setShowPalette(false)}>
+                  <Text style={styles.footerBtnText}>Close</Text>
                 </TouchableOpacity>
-              ))}
+                <TouchableOpacity style={styles.footerBtnSolid} onPress={handleNext}>
+                  <Text style={styles.footerBtnSolidText}>Continue Test</Text>
+                </TouchableOpacity>
+              </View>
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F4F7FB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  timerWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 84,
-  },
-  timerText: {
-    color: '#00B4A2',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  testName: {
-    flex: 1,
-    color: '#1E293B',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginHorizontal: 10,
-  },
-  jumpWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 78,
-    justifyContent: 'flex-end',
-  },
-  jumpText: {
-    color: '#5F6FE4',
-    fontFamily: Fonts.interbold,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  dotsWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 6,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: '#5F6FE4',
-    marginLeft: 3,
-  },
-  progressContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  progressTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  questionCounter: {
-    color: '#64748B',
-    fontFamily: Fonts.intermedium,
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  counterBold: {
-    color: '#1E293B',
-    fontFamily: Fonts.interbold,
-  },
-  jumpIconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 4,
-    marginBottom: 10,
-  },
-  progressBarFill: {
-    height: 8,
-    backgroundColor: '#00B4A2',
-    borderRadius: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  statAnswered: {
-    color: '#00B4A2',
-    fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statSkipped: {
-    color: '#F59E0B',
-    fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  statRemaining: {
-    color: '#64748B',
-    fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
-  },
-  securityNotice: {
-    marginBottom: 16,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 10,
-  },
-  tagGreen: {
-    backgroundColor: '#E6F4F1',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  tagGreenText: {
-    color: '#00B4A2',
-    fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tagYellow: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  tagYellowText: {
-    color: '#D97706',
-    fontFamily: Fonts.interbold,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  questionText: {
-    color: '#1E293B',
-    fontFamily: Fonts.intermedium,
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '500',
-    marginBottom: 24,
-  },
-  optionsWrap: {
-    gap: 12,
-  },
-  optionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    shadowColor: '#CBD5E1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  selectedOptionCard: {
-    backgroundColor: '#E6F4F1',
-    borderColor: '#00B4A2',
-    borderWidth: 2,
-  },
-  optionLetter: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  selectedOptionLetter: {
-    backgroundColor: '#00B4A2',
-  },
-  optionLetterText: {
-    color: '#334155',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  selectedOptionLetterText: {
-    color: '#FFFFFF',
-  },
-  optionText: {
-    flex: 1,
-    color: '#1E293B',
-    fontFamily: Fonts.interregular,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  selectedOptionText: {
-    color: '#0F172A',
-    fontFamily: Fonts.intermedium,
-    fontWeight: '500',
-  },
-  bottomNav: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#F4F7FB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  navButtonSecondary: {
-    backgroundColor: '#EEF2F6',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-  },
-  navButtonTextSecondary: {
-    color: '#64748B',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  skipButton: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#F59E0B',
-  },
-  skipButtonText: {
-    color: '#F59E0B',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  navButtonPrimary: {
-    backgroundColor: '#00B4A2',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-  },
-  navButtonTextPrimary: {
-    color: '#FFFFFF',
-    fontFamily: Fonts.interbold,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-    justifyContent: 'flex-end',
-  },
-  overlayDismiss: {
-    flex: 1,
-  },
-  paletteSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 20,
-    maxHeight: '72%',
-  },
-  paletteHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  paletteTitle: {
-    color: '#1E293B',
-    fontFamily: Fonts.interbold,
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  paletteStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  paletteStatText: {
-    color: '#64748B',
-    fontFamily: Fonts.intermedium,
-    fontSize: 12,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 6,
-  },
-  legendText: {
-    color: '#64748B',
-    fontFamily: Fonts.interregular,
-    fontSize: 11,
-  },
-  paletteGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    paddingBottom: 12,
-  },
-  paletteButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#EAF1F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paletteButtonAnswered: {
-    backgroundColor: '#BAF0E7',
-  },
-  paletteButtonSkipped: {
-    backgroundColor: '#FFE4B5',
-  },
-  paletteButtonActive: {
-    backgroundColor: '#5F6FE4',
-  },
-  paletteButtonText: {
-    color: '#475569',
-    fontFamily: Fonts.interbold,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  paletteButtonTextDark: {
-    color: '#1E293B',
-  },
-  paletteButtonTextActive: {
-    color: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  headerSafeArea: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: normalize(16), height: verticalScale(56) },
+  iconButton: { width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+  jumpIconButton: { width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { flex: 1, fontSize: normalize(18), fontFamily: Fonts.interbold, color: theme.colors.text, textAlign: 'center', marginHorizontal: normalize(12) },
+
+  subHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: normalize(20), paddingBottom: verticalScale(16), paddingTop: verticalScale(16), borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  subHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: normalize(12) },
+  qCountBadge: { backgroundColor: '#FFFFFF', paddingHorizontal: normalize(12), paddingVertical: verticalScale(6), borderRadius: normalize(10), borderWidth: 1, borderColor: theme.colors.border },
+  qCountText: { fontSize: normalize(13), fontFamily: Fonts.interbold, color: theme.colors.text },
+  syncBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: normalize(8), paddingVertical: verticalScale(6), borderRadius: normalize(8), gap: normalize(4) },
+  syncDot: { width: normalize(6), height: normalize(6), borderRadius: normalize(3), backgroundColor: '#10B981' },
+  syncText: { color: Colorpath.TextSecondary, fontSize: normalize(11), fontFamily: Fonts.intermedium },
+
+  timerBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: normalize(14), paddingVertical: verticalScale(8), borderRadius: normalize(12), gap: normalize(6), shadowColor: '#EF4444', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  timerText: { color: '#FFFFFF', fontSize: normalize(14), fontFamily: Fonts.interbold },
+
+  scrollContent: { paddingHorizontal: normalize(20), paddingTop: verticalScale(24), paddingBottom: verticalScale(120) },
+
+  questionSection: { marginBottom: verticalScale(32) },
+  questionText: { fontSize: normalize(17), color: theme.colors.text, fontFamily: Fonts.interbold, lineHeight: normalize(26), marginBottom: verticalScale(24) },
+
+  optionsContainer: { gap: verticalScale(12) },
+  optionContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: normalize(16), paddingVertical: verticalScale(16), borderRadius: normalize(16), borderWidth: 1, borderColor: theme.colors.border, backgroundColor: '#FFFFFF' },
+  optionSelected: { borderColor: theme.colors.primary, backgroundColor: '#F0F9FF' },
+  optionLetter: { fontSize: normalize(15), color: Colorpath.TextSecondary, fontFamily: Fonts.interbold, marginRight: normalize(10) },
+  optionLetterSelected: { color: theme.colors.primary },
+  optionText: { fontSize: normalize(15), color: theme.colors.text, fontFamily: Fonts.intermedium, flex: 1, lineHeight: normalize(22) },
+  optionTextSelected: { color: '#0F172A', fontFamily: Fonts.interbold },
+
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: normalize(20), paddingTop: verticalScale(16), paddingBottom: verticalScale(24), backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: theme.colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 15 },
+  prevButton: { width: normalize(48), height: normalize(48), borderRadius: normalize(24), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
+
+  reviewButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: normalize(48), paddingHorizontal: normalize(24), borderRadius: normalize(24), borderWidth: 1.5, borderColor: '#F59E0B' },
+  reviewButtonActive: { backgroundColor: '#F59E0B' },
+  reviewIcon: { marginRight: normalize(6) },
+  reviewButtonText: { color: '#F59E0B', fontSize: normalize(14), fontFamily: Fonts.interbold },
+  reviewButtonTextActive: { color: '#FFFFFF' },
+
+  nextButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: normalize(48), backgroundColor: theme.colors.primary, borderRadius: normalize(24), marginLeft: normalize(12), shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  nextButtonText: { color: '#FFFFFF', fontSize: normalize(15), fontFamily: Fonts.interbold, marginRight: normalize(6) },
+
+  paletteOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
+  paletteBg: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)' },
+  paletteContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: Dimensions.get('window').height * 0.75, backgroundColor: '#FFFFFF', borderTopLeftRadius: normalize(32), borderTopRightRadius: normalize(32), paddingHorizontal: normalize(24), paddingTop: verticalScale(12), paddingBottom: verticalScale(24) },
+  paletteDragBar: { width: normalize(48), height: normalize(5), backgroundColor: '#E2E8F0', borderRadius: normalize(3), alignSelf: 'center', marginBottom: verticalScale(20) },
+  paletteHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: verticalScale(16) },
+  paletteTitle: { fontSize: normalize(20), fontFamily: Fonts.interbold, color: theme.colors.text },
+  closeBtn: { width: normalize(36), height: normalize(36), borderRadius: normalize(18), backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+
+  paletteStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: verticalScale(20), paddingHorizontal: normalize(8) },
+  paletteStatText: { fontSize: normalize(13), fontFamily: Fonts.intermedium, color: Colorpath.TextSecondary },
+
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: normalize(12), justifyContent: 'flex-start' },
+  gridBox: { width: normalize(42), height: normalize(42), borderRadius: normalize(12), backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center' },
+  gridAnswered: { backgroundColor: '#10B981', borderWidth: 0 },
+  gridAnsweredMarked: { backgroundColor: '#10B981', borderWidth: 2, borderColor: '#F59E0B' },
+  gridCurrent: { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: theme.colors.primary },
+  gridReview: { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#F59E0B' },
+  gridSkipped: { backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#CBD5E1' },
+
+  gridText: { fontSize: normalize(15), color: Colorpath.TextSecondary, fontFamily: Fonts.interbold },
+  gridTextAnswered: { color: '#FFFFFF' },
+  gridTextCurrent: { color: theme.colors.primary },
+  gridTextReview: { color: '#D97706' },
+  gridTextSkipped: { color: '#94A3B8' },
+
+  paletteLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: normalize(16), marginTop: verticalScale(24), backgroundColor: '#F8FAFC', padding: normalize(16), borderRadius: normalize(16) },
+  legendItem: { flexDirection: 'row', alignItems: 'center', width: '45%', marginBottom: verticalScale(8) },
+  legendDot: { width: normalize(12), height: normalize(12), borderRadius: normalize(6), marginRight: normalize(8), borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)' },
+  legendText: { color: Colorpath.TextSecondary, fontSize: normalize(12), fontFamily: Fonts.intermedium },
+
+  paletteFooter: { flexDirection: 'row', gap: normalize(16), marginTop: verticalScale(24) },
+  footerBtnOutline: { flex: 1, height: normalize(52), borderRadius: normalize(16), borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  footerBtnText: { color: theme.colors.text, fontSize: normalize(15), fontFamily: Fonts.interbold },
+  footerBtnSolid: { flex: 1, height: normalize(52), borderRadius: normalize(16), backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  footerBtnSolidText: { color: '#FFFFFF', fontSize: normalize(15), fontFamily: Fonts.interbold },
 });

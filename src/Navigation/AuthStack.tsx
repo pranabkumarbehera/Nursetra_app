@@ -9,6 +9,8 @@ import { RegisterScreen } from '../Screen/Auth/Register';
 import { ForgotPassword } from '../Screen/Auth/ForgotPassword';
 import { OtpVerification } from '../Screen/Auth/OtpVerification';
 import { ChangePassword } from '../Screen/Auth/ChangePassword';
+import { PrivacyPolicyScreen } from '../Screen/Legal/PrivacyPolicy';
+import { TermsConditionsScreen } from '../Screen/Legal/TermsConditions';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +24,8 @@ export const AuthStack = () => {
       <Stack.Screen name={ROUTES.FORGOT_PASSWORD} component={ForgotPassword} />
       <Stack.Screen name={ROUTES.OTP_VERIFICATION} component={OtpVerification} />
       <Stack.Screen name={ROUTES.CHANGE_PASSWORD} component={ChangePassword} />
+      <Stack.Screen name={ROUTES.PRIVACY_POLICY} component={PrivacyPolicyScreen} />
+      <Stack.Screen name={ROUTES.TERMS_CONDITIONS} component={TermsConditionsScreen} />
     </Stack.Navigator>
   );
 };

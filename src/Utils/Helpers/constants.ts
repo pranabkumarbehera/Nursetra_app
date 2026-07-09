@@ -1,0 +1,9 @@
+export default {
+    BASE_URL: 'https://www.nursetra.in/api/v1',
+    TOKEN: 'TOKEN',
+    REFRESH_TOKEN: 'REFRESH_TOKEN',
+    USER_DATA: 'USER_DATA',
+    REMEMBER_PASSWORD: 'REMEMBER_PASSWORD',
+    SAVED_EMAIL: 'SAVED_EMAIL',
+    SAVED_PASSWORD: 'SAVED_PASSWORD',
+};

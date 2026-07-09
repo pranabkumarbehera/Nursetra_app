@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, StyleProp } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ViewStyle, StyleProp, Animated } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { Fonts, theme } from '../../Themes';
@@ -24,9 +24,23 @@ export const Header: React.FC<HeaderProps> = ({
   light = false,
 }) => {
   const navigation = useNavigation<any>();
+  const rightIconScale = useRef(new Animated.Value(1)).current;
   const iconColor = light ? theme.colors.white : theme.colors.text;
   const titleColor = light ? theme.colors.white : theme.colors.text;
   const subtitleColor = light ? 'rgba(255,255,255,0.75)' : theme.colors.textLight;
+
+  const handleRightPress = () => {
+    if (!rightIcon) {
+      return;
+    }
+
+    Animated.sequence([
+      Animated.spring(rightIconScale, { toValue: 0.88, useNativeDriver: true, speed: 30, bounciness: 8 }),
+      Animated.spring(rightIconScale, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 8 }),
+    ]).start();
+
+    onRightPress?.();
+  };
 
   return (
     <View style={[styles.container, style]}>
@@ -46,11 +60,15 @@ export const Header: React.FC<HeaderProps> = ({
       </View>
 
       <TouchableOpacity
-        onPress={onRightPress}
+        onPress={handleRightPress}
         style={[styles.iconButton, !rightIcon && styles.hiddenButton]}
         activeOpacity={rightIcon ? 0.8 : 1}
       >
-        {rightIcon ? <Icon name={rightIcon} size={20} color={iconColor} /> : null}
+        {rightIcon ? (
+          <Animated.View style={{ transform: [{ scale: rightIconScale }] }}>
+            <Icon name={rightIcon} size={20} color={iconColor} />
+          </Animated.View>
+        ) : null}
       </TouchableOpacity>
     </View>
   );

@@ -1,81 +1,138 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Fonts, theme } from '../../Themes';
 import { Input } from '../../Components/inputs/Input';
 import { Button } from '../../Components/buttons/Button';
 import { ROUTES } from '../../Navigation/RouteNames';
+import { forgotPasswordRequest, forgotPasswordSuccess } from '../../Redux/Reducers/AuthReducer';
+import { RootState } from '../../Redux/Store';
+import { validateEmail } from '../../Utils/Helpers/validation';
+
+const HERO_GRADIENT = ['#07182E', '#0B5FA8', '#18B5A5'];
+const CARD_GRADIENT = ['rgba(255,255,255,0.98)', 'rgba(247,251,255,0.95)'];
+const ACCENT_GRADIENT = ['rgba(11,95,168,0.16)', 'rgba(24,181,165,0.10)'];
+const TIP_GRADIENT = ['rgba(245,158,11,0.16)', 'rgba(251,191,36,0.08)'];
 
 export const ForgotPassword = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const [method, setMethod] = useState<'email' | 'mobile'>('email');
+  const dispatch = useDispatch();
+  const auth = useSelector((state: RootState) => state.AuthReducer);
+  const [email, setEmail] = useState('');
+  const [touched, setTouched] = useState(false);
+
+  useEffect(() => {
+    dispatch(forgotPasswordSuccess(null));
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!auth.forgotPasswordResponse) return;
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: ROUTES.OTP_VERIFICATION,
+        params: { email: email.trim() },
+      })
+    );
+  }, [auth.forgotPasswordResponse, email, navigation]);
+
+  const emailError = touched ? validateEmail(email) : '';
+
+  const handleSubmit = () => {
+    setTouched(true);
+    if (validateEmail(email)) return;
+    dispatch(forgotPasswordRequest({ email: email.trim() }));
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={22} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Forgot Password</Text>
-      </View>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar barStyle="light-content" backgroundColor="#07182E" />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.heroIcon}>
-          <Icon name="lock-closed-outline" size={28} color={theme.colors.white} />
-        </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom, 24) }]}
+      >
+        <LinearGradient colors={HERO_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <View style={styles.heroGlowOne} />
+          <View style={styles.heroGlowTwo} />
 
-        <Text style={styles.title}>Reset Your Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your registered {method === 'email' ? 'email address' : 'mobile number'} and we&apos;ll send you a one-time password.
-        </Text>
-
-        <View style={styles.toggleContainer}>
-          <TouchableOpacity
-            style={[styles.toggleButton, method === 'email' && styles.toggleButtonActive]}
-            onPress={() => setMethod('email')}
-          >
-            <Icon name="mail-outline" size={18} color={method === 'email' ? theme.colors.primary : theme.colors.textLight} />
-            <Text style={[styles.toggleText, method === 'email' && styles.toggleTextActive]}>Email Address</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleButton, method === 'mobile' && styles.toggleButtonActive]}
-            onPress={() => setMethod('mobile')}
-          >
-            <Icon name="call-outline" size={18} color={method === 'mobile' ? theme.colors.primary : theme.colors.textLight} />
-            <Text style={[styles.toggleText, method === 'mobile' && styles.toggleTextActive]}>Mobile Number</Text>
-          </TouchableOpacity>
-        </View>
-
-        {method === 'email' ? (
-          <Input label="Email Address" placeholder="yourname@email.com" keyboardType="email-address" leftIcon="mail-outline" />
-        ) : (
-          <Input label="Mobile Number" placeholder="Enter mobile number" keyboardType="phone-pad" leftIcon="call-outline" />
-        )}
-
-        <Button title="Send OTP" onPress={() => navigation.navigate(ROUTES.OTP_VERIFICATION)} style={styles.actionButton} />
-
-        <View style={styles.dividerContainer}>
-          <View style={styles.divider} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.divider} />
-        </View>
-
-        <View style={styles.footerTextRow}>
-          <Text style={styles.footerText}>Remember your password? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate(ROUTES.LOGIN)}>
-            <Text style={styles.footerLink}>Sign in</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.securityCard}>
-          <View style={styles.securityIcon}>
-            <Icon name="lock-closed" size={16} color={theme.colors.warning} />
+          <View style={styles.headerRow}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+              <Icon name="arrow-back" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Forgot Password</Text>
+            <View style={styles.headerSpacer} />
           </View>
-          <View>
-            <Text style={styles.securityTitle}>Secure &amp; Encrypted</Text>
-            <Text style={styles.securitySubtitle}>Your data is always protected with us</Text>
+
+          <View style={styles.heroCenter}>
+            <LinearGradient colors={ACCENT_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.heroIconWrap}>
+              <Icon name="lock-closed-outline" size={30} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={styles.heroTitle}>Reset your password</Text>
+            <Text style={styles.heroSubtitle}>
+              Enter your registered email address and we will send a one-time password to continue.
+            </Text>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.contentWrap}>
+          <LinearGradient colors={CARD_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.card}>
+            <View style={styles.cardTopBadge}>
+              <LinearGradient colors={TIP_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tipPill}>
+                <Icon name="shield-checkmark-outline" size={14} color="#D97706" />
+                <Text style={styles.tipPillText}>Secure OTP</Text>
+              </LinearGradient>
+            </View>
+
+            <Text style={styles.sectionTitle}>Email verification</Text>
+            <Text style={styles.sectionSubtitle}>
+              We will verify your account and guide you to the next step.
+            </Text>
+
+            <View style={styles.formCard}>
+              <Input
+                label="Email Address"
+                placeholder="yourname@email.com"
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setTouched(true)}
+                onBlur={() => setTouched(true)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                leftIcon="mail-outline"
+                error={emailError}
+              />
+            </View>
+
+            <Button
+              title="Send OTP"
+              onPress={handleSubmit}
+              style={styles.actionButton}
+              loading={auth.isLoading}
+              disabled={auth.isLoading || !!validateEmail(email)}
+            />
+
+            <View style={styles.hintRow}>
+              <View style={styles.hintItem}>
+                <View style={styles.hintDot} />
+                <Text style={styles.hintText}>OTP will be sent to your registered email</Text>
+              </View>
+              <View style={styles.hintItem}>
+                <View style={styles.hintDot} />
+                <Text style={styles.hintText}>Check spam or promotions if you do not see it</Text>
+              </View>
+            </View>
+          </LinearGradient>
+
+          <View style={styles.footerBox}>
+            <Text style={styles.footerText}>Remember your password? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.LOGIN)} activeOpacity={0.8}>
+              <Text style={styles.footerLink}>Sign in</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -86,115 +143,180 @@ export const ForgotPassword = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: '#F2F7FB',
   },
-  header: {
+  scrollContent: {
+    flexGrow: 1,
+  },
+  hero: {
+    paddingBottom: 28,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    overflow: 'hidden',
+  },
+  heroGlowOne: {
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 180,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: -40,
+    right: -35,
+  },
+  heroGlowTwo: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 140,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    left: -30,
+    bottom: -20,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 14,
-    backgroundColor: theme.colors.white,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    backgroundColor: 'rgba(255,255,255,0.14)',
   },
   headerTitle: {
-    ...theme.typography.h3,
+    color: '#FFFFFF',
+    fontSize: 17,
     fontFamily: Fonts.interbold,
-    fontSize:18,
-    color:"#000000",
-    fontWeight:'bold'
-  },
-  content: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-    alignItems: 'center',
-  },
-  heroIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 28,
-    marginBottom: 26,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.2,
-    shadowRadius: 22,
-    elevation: 10,
-  },
-  title: {
-    ...theme.typography.h1,
-    fontFamily: Fonts.interbold,
-    fontSize: 24,
-    marginBottom: 12,
     textAlign: 'center',
-  },
-  subtitle: {
-    ...theme.typography.body,
-    color: theme.colors.textLight,
-    textAlign: 'center',
-    lineHeight: 25,
-    marginBottom: 24,
-    paddingHorizontal: 6,
-  },
-  toggleContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    backgroundColor: '#E8F1FC',
-    padding: 5,
-    borderRadius: 18,
-    marginBottom: 20,
-  },
-  toggleButton: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 14,
+  },
+  headerSpacer: {
+    width: 42,
+    height: 42,
+  },
+  heroCenter: {
+    paddingHorizontal: 24,
+    paddingTop: 18,
+    alignItems: 'center',
+  },
+  heroIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
+    marginBottom: 16,
+    shadowColor: '#0B5FA8',
+    shadowOpacity: 0.24,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
-  toggleButtonActive: {
-    backgroundColor: theme.colors.white,
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 28,
+    fontFamily: Fonts.interbold,
+    textAlign: 'center',
+    marginBottom: 10,
   },
-  toggleText: {
-    marginLeft: 8,
-    color: theme.colors.textLight,
-    fontFamily: Fonts.intersemibold,
+  heroSubtitle: {
+    color: 'rgba(255,255,255,0.86)',
     fontSize: 14,
+    fontFamily: Fonts.interregular,
+    textAlign: 'center',
+    lineHeight: 22,
+    maxWidth: 320,
   },
-  toggleTextActive: {
-    color: theme.colors.primary,
+  contentWrap: {
+    paddingHorizontal: 16,
+    marginTop: -18,
+    paddingBottom: 18,
+  },
+  card: {
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  cardTopBadge: {
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  tipPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  tipPillText: {
+    color: '#92400E',
+    fontSize: 12,
+    fontFamily: Fonts.interbold,
+  },
+  sectionTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    fontFamily: Fonts.interbold,
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    color: theme.colors.textLight,
+    fontSize: 14,
+    fontFamily: Fonts.interregular,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.16)',
+    marginBottom: 16,
   },
   actionButton: {
-    marginTop: 8,
+    marginTop: 2,
+    marginBottom: 16,
   },
-  dividerContainer: {
-    width: '100%',
+  hintRow: {
+    gap: 10,
+    paddingTop: 4,
+  },
+  hintItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
+    alignItems: 'flex-start',
+    gap: 10,
   },
-  divider: {
+  hintDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
+    marginTop: 7,
+  },
+  hintText: {
     flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    color: theme.colors.textLight,
+    color: '#516074',
+    fontSize: 13,
     fontFamily: Fonts.interregular,
+    lineHeight: 20,
   },
-  footerTextRow: {
+  footerBox: {
     flexDirection: 'row',
-    marginBottom: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
   },
   footerText: {
     color: theme.colors.textLight,
@@ -205,34 +327,5 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontFamily: Fonts.interbold,
     fontSize: 15,
-  },
-  securityCard: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EBF4FF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#D6E6FA',
-    padding: 16,
-  },
-  securityIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
-    backgroundColor: theme.colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  securityTitle: {
-    color: theme.colors.primary,
-    fontFamily: Fonts.interbold,
-    marginBottom: 2,
-  },
-  securitySubtitle: {
-    color: theme.colors.textLight,
-    fontSize: 12,
-    fontFamily: Fonts.interregular,
   },
 });

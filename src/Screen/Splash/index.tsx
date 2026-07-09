@@ -1,8 +1,12 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Fonts, Imagepath, theme } from '../../Themes';
+import constants from '../../Utils/Helpers/constants';
 import { ROUTES } from '../../Navigation/RouteNames';
+import { tokenSuccess } from '../../Redux/Reducers/AuthReducer';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const EXAM_CHIPS = ['NORCET', 'GNM', 'B.Sc Nursing', 'CHO', 'ESIC', 'RRB'];
@@ -18,6 +22,7 @@ const BG_ICONS = [
 
 export const SplashScreen = () => {
   const navigation = useNavigation<any>();
+  const dispatch = useDispatch();
 
   const progress = React.useRef(new Animated.Value(0)).current;
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -107,8 +112,15 @@ export const SplashScreen = () => {
             useNativeDriver: false,
           }).start(() => {
             // Navigate once loading is fully done
-            timeout = setTimeout(() => {
-              navigation.replace(ROUTES.ONBOARDING);
+            timeout = setTimeout(async () => {
+              const token = await AsyncStorage.getItem(constants.TOKEN);
+              if (token) {
+                dispatch(tokenSuccess(token));
+                navigation.replace(ROUTES.MAIN_STACK);
+              } else {
+                const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+                navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
+              }
             }, 800);
           });
         });
@@ -118,7 +130,7 @@ export const SplashScreen = () => {
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [navigation]);
+  }, [dispatch, navigation]);
 
   const width = progress.interpolate({
     inputRange: [0, 100],
