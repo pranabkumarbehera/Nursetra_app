@@ -7,6 +7,8 @@ import { logoutSuccess, refreshRequest, tokenSuccess } from '../../Redux/Reducer
 import { clearProfile } from '../../Redux/Reducers/ProfileReducer';
 import { clearHomeData } from '../../Redux/Reducers/HomeReducer';
 import { clearBundleFlowState, clearMockTestData, clearPaymentSession } from '../../Redux/Reducers/MockTestReducer';
+import { reset as resetNavigation } from '../../Navigation/NavigationService';
+import { ROUTES } from '../../Navigation/RouteNames';
 import Toast from 'react-native-toast-message';
 
 const normalizeUrl = (url: string) => url.replace(/^\/+/, '');
@@ -21,11 +23,6 @@ let isLoggingOut = false;
 
 const performAutoLogout = async () => {
     if (isLoggingOut) {
-        return;
-    }
-
-    const authState = Store.getState().AuthReducer;
-    if (!authState?.token) {
         return;
     }
 
@@ -54,6 +51,18 @@ const performAutoLogout = async () => {
     Store.dispatch(clearBundleFlowState());
     Store.dispatch(clearMockTestData());
     Toast.show({ type: 'error', text1: 'Session expired. Please login again.' });
+    resetNavigation({
+        index: 0,
+        routes: [
+            {
+                name: ROUTES.AUTH_STACK,
+                state: {
+                    index: 0,
+                    routes: [{ name: ROUTES.LOGIN }],
+                },
+            },
+        ],
+    });
     
     setTimeout(() => {
         isLoggingOut = false;
@@ -83,19 +92,22 @@ axiosInstance.interceptors.request.use(
 
 // Response Interceptor for Token Handling
 axiosInstance.interceptors.response.use(
-    async (response) => {
-        const message = response.data?.message?.toLowerCase() || '';
-        if (message.includes('invalid') || message.includes('unauthorized') || message.includes('expired')) {
-            await performAutoLogout();
-            return Promise.reject(new Error(response.data?.message || 'Session expired'));
-        }
-        return response;
-    },
+    (response) => response,
     async (error) => {
         const statusCode = error.response?.status;
         const message = error.response?.data?.message?.toLowerCase() || '';
+        const requestUrl = String(error.config?.url || '');
+        const isAuthRequest = [
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/verify-otp',
+            '/reset-password',
+            '/auth/logout',
+            '/auth/refresh',
+        ].some(path => requestUrl.includes(path));
 
-        if (statusCode === 401 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired')) {
+        if (!isAuthRequest && (statusCode === 401 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired'))) {
             await performAutoLogout();
             return Promise.reject(error);
         }

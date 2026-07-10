@@ -40,6 +40,7 @@ import {
 } from '../../Utils/Helpers/home';
 import { CommonActions } from '@react-navigation/native';
 import { ROUTES } from '../../Navigation/RouteNames';
+import { reset as resetNavigation } from '../../Navigation/NavigationService';
 
 type EditableProfile = {
     firstName: string;
@@ -83,6 +84,7 @@ export const ProfileScreen = ({ navigation }: any) => {
     const { logoutResponse, isLoading: isAuthLoading } = useSelector((state: RootState) => state.AuthReducer);
     const profileState = useSelector((state: RootState) => state.ProfileReducer);
     const profileData = profileState.profileData;
+    const authToken = useSelector((state: RootState) => state.AuthReducer.token);
     const [isEditVisible, setIsEditVisible] = useState(false);
     const [form, setForm] = useState<EditableProfile>(DEFAULT_FORM);
     const [imageError, setImageError] = useState(false);
@@ -162,26 +164,32 @@ export const ProfileScreen = ({ navigation }: any) => {
         dispatch(logoutSuccess('logout'));
     };
 
+    const handleNavigationReset = () => {
+        resetNavigation({
+            index: 0,
+            routes: [
+                {
+                    name: ROUTES.AUTH_STACK,
+                    state: {
+                        index: 0,
+                        routes: [{ name: ROUTES.LOGIN }],
+                    },
+                },
+            ],
+        });
+    };
+
     useEffect(() => {
         if (logoutResponse === 'logout') {
-            navigation.dispatch(
-                CommonActions.reset({
-                    index: 0,
-                    routes: [
-                        {
-                            name: ROUTES.AUTH_STACK,
-                            state: {
-                                index: 0,
-                                routes: [{ name: ROUTES.LOGIN }],
-                            },
-                        },
-                    ],
-                })
-            );
+            handleNavigationReset();
         }
-    }, [logoutResponse, navigation]);
+    }, [logoutResponse]);
 
-    const authToken = useSelector((state: RootState) => state.AuthReducer.token);
+    useEffect(() => {
+        if (!authToken) {
+            handleNavigationReset();
+        }
+    }, [authToken]);
 
     useEffect(() => {
         if (!authToken) return;

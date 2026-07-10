@@ -73,7 +73,7 @@ export function* login_Saga(action: any): Generator<any, void, any> {
         const token = getAccessToken(response);
         const refreshToken = getRefreshToken(response);
 
-        if (token || response?.status === 200 || response?.status === 201) {
+        if (token && (response?.status === 200 || response?.status === 201)) {
             yield put(loginSuccess({ ...response?.data, token }));
             if (token) {
                 yield call(AsyncStorage.setItem, constants.TOKEN, token);

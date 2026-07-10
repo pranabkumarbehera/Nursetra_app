@@ -705,7 +705,7 @@ const MockTestQuestionScreen = ({ route, navigation }: MockTestQuestionScreenPro
                                             {isSelected && <View style={styles.radioDot} />}
                                         </View>
                                         <Text style={[styles.optionLetter, isSelected && styles.optionLetterSelected]}>
-                                            {['A', 'B', 'C', 'D', 'E', 'F'][index]}
+                                            ({['A', 'B', 'C', 'D', 'E', 'F'][index]})
                                         </Text>
                                         <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                                             {optionText}
@@ -896,10 +896,10 @@ const styles = StyleSheet.create({
     radioCircle: { width: normalize(22), height: normalize(22), borderRadius: normalize(11), borderWidth: 2, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center', marginRight: normalize(14) },
     radioCircleSelected: { borderColor: theme.colors.primary },
     radioDot: { width: normalize(10), height: normalize(10), borderRadius: normalize(5), backgroundColor: theme.colors.primary },
-    optionLetter: { fontSize: normalize(15), color: Colorpath.TextSecondary, fontFamily: Fonts.interbold, marginRight: normalize(10) },
-    optionLetterSelected: { color: theme.colors.primary },
-    optionText: { fontSize: normalize(15), color: theme.colors.text, fontFamily: Fonts.intermedium, flex: 1, lineHeight: normalize(22) },
-    optionTextSelected: { color: '#0F172A', fontFamily: Fonts.interbold },
+    optionLetter: { fontSize: normalize(15), color: Colorpath.TextSecondary, fontFamily: Fonts.interbold, fontWeight: '800', marginRight: normalize(10) },
+    optionLetterSelected: { color: theme.colors.primary, fontWeight: '900' },
+    optionText: { fontSize: normalize(15), color: theme.colors.text, fontFamily: Fonts.intermedium, fontWeight: '700', flex: 1, lineHeight: normalize(22) },
+    optionTextSelected: { color: '#0F172A', fontFamily: Fonts.interbold, fontWeight: '800' },
 
     bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: normalize(20), paddingTop: verticalScale(16), paddingBottom: verticalScale(24), backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: theme.colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 15 },
     prevButton: { width: normalize(48), height: normalize(48), borderRadius: normalize(24), backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.colors.border },
