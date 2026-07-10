@@ -95,17 +95,21 @@ export const MyResultsScreen = () => {
     [recentItems, selectedCategory]
   );
 
+  const authToken = useSelector((state: RootState) => state.AuthReducer.token);
+
   useEffect(() => {
+    if (!authToken) return;
     if (!homeState.dashboardData && !homeState.isBootstrapping) {
       dispatch(bootstrapHomeRequest({}));
     }
-  }, [dispatch, homeState.dashboardData, homeState.isBootstrapping]);
+  }, [authToken, dispatch, homeState.dashboardData, homeState.isBootstrapping]);
 
   useEffect(() => {
+    if (!authToken) return;
     if (!profileState.profileData && !profileState.isLoading) {
       dispatch(getProfileRequest({}));
     }
-  }, [dispatch, profileState.profileData, profileState.isLoading]);
+  }, [authToken, dispatch, profileState.profileData, profileState.isLoading]);
 
   useEffect(() => {
     if (

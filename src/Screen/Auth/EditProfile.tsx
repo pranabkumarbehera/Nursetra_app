@@ -26,10 +26,13 @@ export const EditProfileScreen = () => {
   const [phone, setPhone] = useState('');
   const [touched, setTouched] = useState({ name: false, email: false, phone: false });
 
+  const authToken = useSelector((state: RootState) => state.AuthReducer.token);
+
   useEffect(() => {
+    if (!authToken) return;
     dispatch(updateProfileSuccess(null));
     dispatch(getProfileRequest({}));
-  }, [dispatch]);
+  }, [authToken, dispatch]);
 
   useEffect(() => {
     if (profileState.profileData) {

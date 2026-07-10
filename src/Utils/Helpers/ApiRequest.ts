@@ -15,73 +15,27 @@ const axiosInstance = axios.create({
     baseURL: constants.BASE_URL,
 });
 
-let refreshPromise: Promise<string | null> | null = null;
-let autoLogoutTriggered = false;
+// Removed refresh token logic as requested
 
-const getAccessToken = (response: any) =>
-    response?.data?.accessToken ||
-    response?.data?.data?.accessToken ||
-    response?.data?.token ||
-    response?.data?.data?.token ||
-    null;
-
-const refreshAccessToken = async () => {
-    if (!refreshPromise) {
-        refreshPromise = (async () => {
-            const storedRefreshToken = await AsyncStorage.getItem(constants.REFRESH_TOKEN);
-            if (!storedRefreshToken) {
-                return null;
-            }
-
-            const startingStatus = Store.getState().AuthReducer.status;
-
-            const nextToken = await new Promise<string | null>((resolve) => {
-                const unsubscribe = Store.subscribe(() => {
-                    const authState = Store.getState().AuthReducer;
-                    if (authState.status === startingStatus) {
-                        return;
-                    }
-
-                    if (authState.status === 'Auth/refreshSuccess') {
-                        const response = authState.refreshResponse || {};
-                        const accessToken = getAccessToken(response);
-                        resolve(accessToken || null);
-                        unsubscribe();
-                        return;
-                    }
-
-                    if (authState.status === 'Auth/refreshFailure') {
-                        resolve(null);
-                        unsubscribe();
-                    }
-                });
-
-                Store.dispatch(refreshRequest({ refreshToken: storedRefreshToken }));
-
-                setTimeout(() => {
-                    unsubscribe();
-                    resolve(null);
-                }, 15000);
-            });
-
-            return nextToken;
-        })().finally(() => {
-            refreshPromise = null;
-        });
-    }
-
-    return refreshPromise;
-};
+let isLoggingOut = false;
 
 const performAutoLogout = async () => {
-    if (autoLogoutTriggered) {
+    if (isLoggingOut) {
         return;
     }
 
-    autoLogoutTriggered = true;
+    const authState = Store.getState().AuthReducer;
+    if (!authState?.token) {
+        return;
+    }
+
+    isLoggingOut = true;
+
+    // Immediately remove token from Redux to prevent concurrent logout triggers
+    Store.dispatch(tokenSuccess(null));
 
     try {
-        await AsyncStorage.multiRemove([
+        await (AsyncStorage as any).multiRemove([
             constants.TOKEN,
             constants.REFRESH_TOKEN,
             constants.USER_DATA,
@@ -93,7 +47,6 @@ const performAutoLogout = async () => {
         // Ignore storage cleanup errors during logout.
     }
 
-    Store.dispatch(tokenSuccess(null));
     Store.dispatch(logoutSuccess('logout'));
     Store.dispatch(clearProfile());
     Store.dispatch(clearHomeData());
@@ -101,6 +54,10 @@ const performAutoLogout = async () => {
     Store.dispatch(clearBundleFlowState());
     Store.dispatch(clearMockTestData());
     Toast.show({ type: 'error', text1: 'Session expired. Please login again.' });
+    
+    setTimeout(() => {
+        isLoggingOut = false;
+    }, 1000);
 };
 
 axiosInstance.interceptors.request.use(
@@ -114,7 +71,6 @@ axiosInstance.interceptors.request.use(
             if (!config.headers) config.headers = {} as any;
             const token = await AsyncStorage.getItem(constants.TOKEN);
             if (token) {
-                autoLogoutTriggered = false;
                 config.headers.Authorization = `Bearer ${token}`;
             }
         } catch {
@@ -125,42 +81,23 @@ axiosInstance.interceptors.request.use(
     (error) => Promise.reject(error),
 );
 
-// Response Interceptor for Refresh Token Handling
+// Response Interceptor for Token Handling
 axiosInstance.interceptors.response.use(
-    (response) => response,
+    async (response) => {
+        const message = response.data?.message?.toLowerCase() || '';
+        if (message.includes('invalid') || message.includes('unauthorized') || message.includes('expired')) {
+            await performAutoLogout();
+            return Promise.reject(new Error(response.data?.message || 'Session expired'));
+        }
+        return response;
+    },
     async (error) => {
-        const originalRequest = error.config || {};
-        const isRefreshRequest = String(originalRequest.url || '').includes('auth/refresh');
         const statusCode = error.response?.status;
+        const message = error.response?.data?.message?.toLowerCase() || '';
 
-        if (statusCode === 401 && isRefreshRequest) {
+        if (statusCode === 401 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired')) {
             await performAutoLogout();
             return Promise.reject(error);
-        }
-
-        if (statusCode === 401 && originalRequest._retry) {
-            await performAutoLogout();
-            return Promise.reject(error);
-        }
-
-        if (statusCode === 401 && !originalRequest._retry && !isRefreshRequest) {
-            originalRequest._retry = true;
-            try {
-                const newAccessToken = await refreshAccessToken();
-                if (newAccessToken) {
-                    if (!originalRequest.headers) {
-                        originalRequest.headers = {};
-                    }
-                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-                    return axiosInstance(originalRequest);
-                }
-
-                await performAutoLogout();
-                return Promise.reject(error);
-            } catch (refreshError: any) {
-                await performAutoLogout();
-                return Promise.reject(refreshError);
-            }
         }
 
         return Promise.reject(error);

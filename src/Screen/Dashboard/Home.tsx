@@ -90,10 +90,11 @@ export const HomeScreen = () => {
   }, [authToken, dispatch, homeState.dashboardData, homeState.isBootstrapping]);
 
   useEffect(() => {
+    if (!authToken) return;
     if (!profileState.profileData && !profileState.isLoading) {
       dispatch(getProfileRequest({}));
     }
-  }, [dispatch, profileState.profileData, profileState.isLoading]);
+  }, [authToken, dispatch, profileState.profileData, profileState.isLoading]);
 
   useEffect(() => {
     if (

@@ -17,10 +17,6 @@ const buildHeader = (token: string | null) => ({
 
 export function* bootstrapHomeSaga(): Generator<any, void, any> {
     const auth = yield select(getAuth);
-    if (!auth?.token) {
-        yield put(bootstrapHomeFailure({ message: 'Missing auth token' }));
-        return;
-    }
     const header = buildHeader(auth.token);
 
     try {

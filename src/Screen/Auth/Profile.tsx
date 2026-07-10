@@ -181,11 +181,14 @@ export const ProfileScreen = ({ navigation }: any) => {
         }
     }, [logoutResponse, navigation]);
 
+    const authToken = useSelector((state: RootState) => state.AuthReducer.token);
+
     useEffect(() => {
+        if (!authToken) return;
         if (!profileData && !profileState.isLoading) {
             dispatch(getProfileRequest({}));
         }
-    }, [dispatch, profileData, profileState.isLoading]);
+    }, [authToken, dispatch, profileData, profileState.isLoading]);
 
     const mappedProfile = useMemo<EditableProfile>(() => normalizeProfileData(profileData), [profileData]);
 

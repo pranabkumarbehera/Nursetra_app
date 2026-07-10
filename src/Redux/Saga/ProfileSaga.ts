@@ -30,10 +30,6 @@ const getAuth = (state: any) => state.AuthReducer;
 
 export function* getProfileSaga(action: any): Generator<any, void, any> {
     const auth = yield select(getAuth);
-    if (!auth?.token) {
-        yield put(getProfileFailure({ message: 'Missing auth token' }));
-        return;
-    }
     const header = {
         Accept: 'application/json',
         contenttype: 'application/json',
@@ -91,7 +87,7 @@ export function* getPaymentHistorySaga(action: any): Generator<any, void, any> {
         const page = action.payload?.page || 1;
         const limit = action.payload?.limit || 10;
         const response = yield call(getApi, `payments/me?page=${page}&limit=${limit}`, header);
-        
+
         if (response?.data?.success === true || response?.status === 200 || response?.data) {
             yield put(paymentHistorySuccess(response?.data));
         } else {
