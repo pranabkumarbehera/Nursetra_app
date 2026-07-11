@@ -1,9 +1,8 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import NetInfo from '@react-native-community/netinfo';
 import constants from './constants';
 import Store from '../../Redux/Store';
-import { logoutSuccess, refreshRequest, tokenSuccess } from '../../Redux/Reducers/AuthReducer';
+import { logoutSuccess, tokenSuccess } from '../../Redux/Reducers/AuthReducer';
 import { clearProfile } from '../../Redux/Reducers/ProfileReducer';
 import { clearHomeData } from '../../Redux/Reducers/HomeReducer';
 import { clearBundleFlowState, clearMockTestData, clearPaymentSession } from '../../Redux/Reducers/MockTestReducer';
@@ -12,12 +11,23 @@ import { ROUTES } from '../../Navigation/RouteNames';
 import Toast from 'react-native-toast-message';
 
 const normalizeUrl = (url: string) => url.replace(/^\/+/, '');
+const isAuthEndpoint = (url: string) => {
+    const requestUrl = normalizeUrl(url).toLowerCase();
+
+    return [
+        'login',
+        'register',
+        'forgot-password',
+        'verify-otp',
+        'reset-password',
+        'auth/logout',
+        'auth/refresh',
+    ].some(path => requestUrl.includes(path));
+};
 
 const axiosInstance = axios.create({
     baseURL: constants.BASE_URL,
 });
-
-// Removed refresh token logic as requested
 
 let isLoggingOut = false;
 
@@ -72,14 +82,10 @@ const performAutoLogout = async () => {
 axiosInstance.interceptors.request.use(
     async (config) => {
         try {
-            const netState = await NetInfo.fetch();
-            if (!netState.isConnected) {
-                return Promise.reject(new Error('No Internet Connection'));
-            }
-
             if (!config.headers) config.headers = {} as any;
             const token = await AsyncStorage.getItem(constants.TOKEN);
-            if (token) {
+            const requestUrl = String(config.url || '');
+            if (token && !isAuthEndpoint(requestUrl)) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
         } catch {
@@ -97,17 +103,9 @@ axiosInstance.interceptors.response.use(
         const statusCode = error.response?.status;
         const message = error.response?.data?.message?.toLowerCase() || '';
         const requestUrl = String(error.config?.url || '');
-        const isAuthRequest = [
-            '/login',
-            '/register',
-            '/forgot-password',
-            '/verify-otp',
-            '/reset-password',
-            '/auth/logout',
-            '/auth/refresh',
-        ].some(path => requestUrl.includes(path));
+        const isAuthRequest = isAuthEndpoint(requestUrl);
 
-        if (!isAuthRequest && (statusCode === 401 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired'))) {
+        if (!isAuthRequest && (statusCode === 401 || statusCode === 403 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired'))) {
             await performAutoLogout();
             return Promise.reject(error);
         }

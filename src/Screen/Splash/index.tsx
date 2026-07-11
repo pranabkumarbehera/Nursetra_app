@@ -7,6 +7,10 @@ import { Fonts, Imagepath, theme } from '../../Themes';
 import constants from '../../Utils/Helpers/constants';
 import { ROUTES } from '../../Navigation/RouteNames';
 import { tokenSuccess } from '../../Redux/Reducers/AuthReducer';
+import { clearProfile } from '../../Redux/Reducers/ProfileReducer';
+import { clearHomeData } from '../../Redux/Reducers/HomeReducer';
+import { clearMockTestData, clearBundleFlowState, clearPaymentSession } from '../../Redux/Reducers/MockTestReducer';
+import { getApi } from '../../Utils/Helpers/ApiRequest';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const EXAM_CHIPS = ['NORCET', 'GNM', 'B.Sc Nursing', 'CHO', 'ESIC', 'RRB'];
@@ -36,6 +40,7 @@ export const SplashScreen = () => {
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
+    let isActive = true;
 
     // Animate background circles continuously
     Animated.loop(
@@ -106,20 +111,63 @@ export const SplashScreen = () => {
           Animated.spring(anim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true })
         )).start(() => {
           // 5. Start the loading progress bar AFTER chips
-          Animated.timing(progress, {
-            toValue: 100,
-            duration: 1200,
-            useNativeDriver: false,
-          }).start(() => {
-            // Navigate once loading is fully done
+        Animated.timing(progress, {
+          toValue: 100,
+          duration: 1200,
+          useNativeDriver: false,
+        }).start(() => {
+            // Verify the stored token before opening the main app.
             timeout = setTimeout(async () => {
+              if (!isActive) {
+                return;
+              }
+
               const token = await AsyncStorage.getItem(constants.TOKEN);
               if (token) {
-                dispatch(tokenSuccess(token));
-                navigation.replace(ROUTES.MAIN_STACK);
-              } else {
+                try {
+                  const response = await getApi('auth/me', { authorization: token });
+                  if (!isActive) {
+                    return;
+                  }
+
+                  if (response?.data?.success === true || response?.status === 200) {
+                    dispatch(tokenSuccess(token));
+                    navigation.replace(ROUTES.MAIN_STACK);
+                    return;
+                  }
+                } catch {
+                  if (!isActive) {
+                    return;
+                  }
+                  // Let the global API interceptor handle expired sessions when possible.
+                }
+
+                await (AsyncStorage as any).multiRemove([
+                  constants.TOKEN,
+                  constants.REFRESH_TOKEN,
+                  constants.USER_DATA,
+                  constants.SAVED_EMAIL,
+                  constants.SAVED_PASSWORD,
+                ]);
+                await AsyncStorage.setItem(constants.REMEMBER_PASSWORD, 'false');
+                dispatch(tokenSuccess(null));
+                dispatch(clearProfile());
+                dispatch(clearHomeData());
+                dispatch(clearMockTestData());
+                dispatch(clearBundleFlowState());
+                dispatch(clearPaymentSession());
+
+                if (!isActive) {
+                  return;
+                }
+
                 const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
                 navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
+              } else {
+                const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+                if (isActive) {
+                  navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
+                }
               }
             }, 800);
           });
@@ -128,6 +176,7 @@ export const SplashScreen = () => {
     });
 
     return () => {
+      isActive = false;
       if (timeout) clearTimeout(timeout);
     };
   }, [dispatch, navigation]);
@@ -180,9 +229,12 @@ export const SplashScreen = () => {
           />
         </View>
         <Text style={styles.appName}>Nursetra</Text>
-        <Animated.Text style={[styles.tagline, { opacity: taglineAnim, transform: [{ scale: taglineAnim }] }]}>
-          Learn. Succeed. Get Hired.
-        </Animated.Text>
+        <Animated.View style={[styles.promoCard, { opacity: taglineAnim, transform: [{ scale: taglineAnim }] }]}>
+          <Text style={styles.promoTitle}>One-Time Purchase • Lifetime Access</Text>
+          <Text style={styles.promoSubtitle}>
+            Purchase any course once and enjoy unlimited premium access forever. No renewals. No expiry.
+          </Text>
+        </Animated.View>
       </Animated.View>
 
       <Animated.View style={[styles.footer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -257,13 +309,31 @@ const styles = StyleSheet.create({
     color: '#0A4B8F',
     marginBottom: 10,
   },
-  tagline: {
+  promoCard: {
+    marginTop: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(11, 95, 168, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(11, 95, 168, 0.14)',
+    alignItems: 'center',
+  },
+  promoTitle: {
     ...theme.typography.body,
-    color: '#4B5563',
+    color: '#0A4B8F',
     textAlign: 'center',
     lineHeight: 24,
     fontSize: 16,
-    fontWeight: "bold"
+    fontFamily: Fonts.interbold,
+    marginBottom: 6,
+  },
+  promoSubtitle: {
+    color: '#4B5563',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontSize: 13,
+    fontFamily: Fonts.intermedium,
   },
   footer: {
     alignItems: 'center',

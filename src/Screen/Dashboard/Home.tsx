@@ -8,6 +8,7 @@ import { RootState } from '../../Redux/Store';
 import { bootstrapHomeRequest } from '../../Redux/Reducers/HomeReducer';
 import { getProfileRequest } from '../../Redux/Reducers/ProfileReducer';
 import { clearTestResult, getTestResultRequest } from '../../Redux/Reducers/MockTestReducer';
+import { logoutRequest } from '../../Redux/Reducers/AuthReducer';
 import { getProfileName, normalizeDashboardStats, normalizeRecentItems, formatPercent, formatScore, formatDisplayDate } from '../../Utils/Helpers/home';
 import { Colorpath, Fonts, theme } from '../../Themes';
 import { QUICK_ACTIONS } from '../../Constants/dummyData';
@@ -24,7 +25,19 @@ const actionIcons: Record<string, string> = {
   '6': 'copy',
 };
 
-const LOCAL_EXAM_CATEGORIES = ['All Subjects', 'NORCET', 'CHO', 'GNM', 'B.Sc Nursing', 'ESIC', 'RRB'];
+const LOCAL_EXAM_CATEGORIES = ['All Subjects', 'Elite Mock', 'NORCET', 'CHO', 'GNM', 'B.Sc Nursing', 'ESIC', 'RRB'];
+
+const isEliteMockItem = (item: any) => {
+  const title = String(item?.title || item?.type || '').toLowerCase();
+  const exam = String(item?.exam || '').toLowerCase();
+
+  return (
+    title.includes('elite mock') ||
+    title.includes('mock bundle') ||
+    exam.includes('elite mock') ||
+    exam.includes('mock bundle')
+  );
+};
 
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
@@ -53,6 +66,11 @@ export const HomeScreen = () => {
     const cats = new Set<string>();
     cats.add('All Subjects');
     recentItems.forEach((item: any) => {
+      if (isEliteMockItem(item)) {
+        cats.add('Elite Mock');
+        return;
+      }
+
       if (item.exam) {
         cats.add(item.exam);
       } else {
@@ -73,6 +91,9 @@ export const HomeScreen = () => {
       return recentItems;
     }
     return recentItems.filter((item: any) => {
+      if (selectedExam === 'Elite Mock') {
+        return isEliteMockItem(item);
+      }
       if (item.exam && item.exam === selectedExam) return true;
       const titleUpper = (item.title || '').toUpperCase();
       return titleUpper.includes(selectedExam.toUpperCase());
@@ -84,17 +105,42 @@ export const HomeScreen = () => {
       return;
     }
 
-    if (!homeState.dashboardData && !homeState.isBootstrapping) {
+    const isAuthError = homeState.error && (
+      String(homeState.error?.message).toLowerCase().includes('unauthorized') ||
+      String(homeState.error?.message).toLowerCase().includes('token') ||
+      homeState.error?.status === 401 ||
+      homeState.error?.status === 403
+    );
+
+    if (isAuthError) {
+      dispatch(logoutRequest({}));
+      return;
+    }
+
+    if (!homeState.dashboardData && !homeState.isBootstrapping && !homeState.error) {
       dispatch(bootstrapHomeRequest({}));
     }
-  }, [authToken, dispatch, homeState.dashboardData, homeState.isBootstrapping]);
+  }, [authToken, dispatch, homeState.dashboardData, homeState.isBootstrapping, homeState.error]);
 
   useEffect(() => {
     if (!authToken) return;
-    if (!profileState.profileData && !profileState.isLoading) {
+
+    const isAuthError = profileState.error && (
+      String(profileState.error?.message).toLowerCase().includes('unauthorized') ||
+      String(profileState.error?.message).toLowerCase().includes('token') ||
+      profileState.error?.status === 401 ||
+      profileState.error?.status === 403
+    );
+
+    if (isAuthError) {
+      dispatch(logoutRequest({}));
+      return;
+    }
+
+    if (!profileState.profileData && !profileState.isLoading && !profileState.error) {
       dispatch(getProfileRequest({}));
     }
-  }, [authToken, dispatch, profileState.profileData, profileState.isLoading]);
+  }, [authToken, dispatch, profileState.profileData, profileState.isLoading, profileState.error]);
 
   useEffect(() => {
     if (

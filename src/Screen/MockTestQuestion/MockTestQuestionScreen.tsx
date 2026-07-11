@@ -17,22 +17,17 @@ import NetInfo from '@react-native-community/netinfo';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StackScreenProps } from '@react-navigation/stack';
 import { useDispatch, useSelector } from 'react-redux';
 import Toast from 'react-native-toast-message';
 import { createShimmerPlaceholder } from 'react-native-shimmer-placeholder';
 import LinearGradient from 'react-native-linear-gradient';
 import Colorpath from '../../Themes/Colorpath';
-import { RootStackParamList } from '../../Navigator/StackNav';
-import { clearStartTestState, clearTestResult, getTestResultRequest, setActiveTestId, startTestRequest, submitTestRequest } from '../../Redux/Reducers/MockTestReducer';
+import { clearStartTestState, getTestResultRequest, setActiveTestId, startTestRequest, submitTestRequest } from '../../Redux/Reducers/MockTestReducer';
 import { RootState } from '../../Redux/Store';
 import { normalize, verticalScale } from '../../Utils/Helpers/normalize';
 import { Fonts, theme } from '../../Themes';
 
 const ShimmerPlaceholder = createShimmerPlaceholder(LinearGradient);
-const { height } = Dimensions.get('window');
-
-type MockTestQuestionScreenProps = any;
 
 const PAGE_BUFFER_SECONDS = 15;
 const FIVE_MIN_WARNING_SECONDS = 5 * 60;
@@ -153,7 +148,7 @@ const mapQuestions = (rawQuestions: any[]) =>
         originalData: q,
     }));
 
-const MockTestQuestionScreen = ({ route, navigation }: MockTestQuestionScreenProps) => {
+const MockTestQuestionScreen = ({ route, navigation }: any) => {
     const insets = useSafeAreaInsets();
     const { testId, duration, acceptedTerms, testData } = route.params || {};
 
@@ -191,7 +186,6 @@ const MockTestQuestionScreen = ({ route, navigation }: MockTestQuestionScreenPro
 
     const mappedQuestions = useMemo(() => mapQuestions(rawQuestions), [rawQuestions]);
     const currentQ = mappedQuestions[currentQuestionIndex];
-    const selectedOption = answers[currentQuestionIndex] !== undefined ? answers[currentQuestionIndex] : null;
     const submittedAttemptId = getAttemptId(submitTestResponse) || sessionMeta?.attemptId || getAttemptId(startTestResponse);
     const questions = useMemo(() => Array.from({ length: mappedQuestions.length }, (_, i) => i + 1), [mappedQuestions.length]);
 

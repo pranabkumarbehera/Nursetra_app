@@ -165,7 +165,7 @@ export function* refreshSaga(action: any): Generator<any, void, any> {
 
     try {
         if (!refreshToken) {
-            yield put(refreshFailure({ message: 'Refresh token is missing' }));
+            yield put(refreshFailure({ message: 'Refresh token is missing' } as any));
             return;
         }
 

@@ -236,6 +236,21 @@ const getBundleQuizzes = (bundle: any) => {
     return [];
 };
 
+const isEliteMockBundle = (bundle: any) => {
+    const payload = getBundlePayload(bundle);
+    const normalizedTitle = normalizeTitle(String(payload?.title || payload?.name || ''));
+    const normalizedCategory = normalizeTitle(String(payload?.category || ''));
+
+    return (
+        normalizedTitle.includes('elite mock bundle') ||
+        normalizedTitle.includes('elite mock') ||
+        normalizedTitle.includes('mock bundle') ||
+        normalizedCategory.includes('elite mock bundle') ||
+        normalizedCategory.includes('elite mock') ||
+        normalizedCategory.includes('mock bundle')
+    );
+};
+
 const getDetailCollections = (bundle: any) => {
     const payload = getBundlePayload(bundle);
     const parsedData = parseMaybeJson(bundle?.data);
@@ -2122,11 +2137,14 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
             const lowerTitle = title.toLowerCase();
             const category = String(bundle?.category || '').toLowerCase();
 
-            const isExam = (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
+            const isExam = isEliteMockBundle(bundle) || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
 
             if (isExam) {
                 // If we need to fallback when API has no categories
                 if (apiCategories.length === 0) {
+                    if (isEliteMockBundle(bundle)) {
+                        dynamicExams.add('Elite Mock Bundle');
+                    }
                     for (const chip of EXAM_CHIPS) {
                         if (lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase())) {
                             dynamicExams.add(chip);
@@ -4072,12 +4090,16 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                 const bTitle = String(bundle?.title || bundle?.name || '').trim();
                                 const lowerTitle = bTitle.toLowerCase();
                                 const category = String(bundle?.category || '').toLowerCase();
+                                const isEliteMock = isEliteMockBundle(bundle);
 
-                                const isExam = (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
+                                const isExam = isEliteMock || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
 
                                 if (mainTab === 'exam') {
                                     const lowerSearch = title.toLowerCase();
-                                    return lowerTitle.includes(lowerSearch) || category.includes(lowerSearch);
+                                    if (lowerSearch === 'elite mock bundle') {
+                                        return isEliteMock;
+                                    }
+                                    return lowerTitle.includes(lowerSearch) || category.includes(lowerSearch) || (isEliteMock && lowerSearch.includes('mock'));
                                 } else {
                                     if (isExam) return false; // Hide ALL exams from the Subjects tab!
 

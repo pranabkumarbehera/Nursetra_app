@@ -74,11 +74,12 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
     }, [dispatch, isFocused]);
 
     useEffect(() => {
-        dispatch(getMockTestListRequest({
-            moduleId: selectedModuleId || '',
-            subModuleId: selectedSubModuleId || '',
-            search: debouncedSearch,
-        }));
+        const params: any = {};
+        if (selectedModuleId) params.moduleId = selectedModuleId;
+        if (selectedSubModuleId) params.subModuleId = selectedSubModuleId;
+        if (debouncedSearch) params.search = debouncedSearch;
+
+        dispatch(getMockTestListRequest(params));
     }, [dispatch, selectedModuleId, selectedSubModuleId, debouncedSearch]);
 
     const { enrolledBundleIds, failedPendingBundleIds } = useMemo(() => {

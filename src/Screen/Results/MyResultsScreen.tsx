@@ -26,11 +26,27 @@ const PANEL_GRADIENT = ['rgba(255,255,255,0.98)', 'rgba(245,250,255,0.94)'];
 const BLUE_GLOW = ['rgba(11,79,138,0.16)', 'rgba(21,184,166,0.08)'];
 const GOLD_GLOW = ['rgba(245,158,11,0.18)', 'rgba(251,191,36,0.08)'];
 const GREEN_GLOW = ['rgba(34,197,94,0.16)', 'rgba(59,130,246,0.08)'];
-const localCategoryNames = ['All Subjects', 'NORCET', 'CHO', 'GNM', 'B.Sc Nursing', 'ESIC', 'RRB'];
+const localCategoryNames = ['All Subjects', 'Elite Mock', 'NORCET', 'CHO', 'GNM', 'B.Sc Nursing', 'ESIC', 'RRB'];
+
+const isEliteMockItem = (item: any) => {
+  const title = String(item?.title || item?.type || '').toLowerCase();
+  const exam = String(item?.exam || '').toLowerCase();
+
+  return (
+    title.includes('elite mock') ||
+    title.includes('mock bundle') ||
+    exam.includes('elite mock') ||
+    exam.includes('mock bundle')
+  );
+};
 
 const isCategoryMatch = (item: any, label: string) => {
   if (label === 'All Subjects') {
     return true;
+  }
+
+  if (label === 'Elite Mock') {
+    return isEliteMockItem(item);
   }
 
   if (item.exam && String(item.exam).toLowerCase() === String(label).toLowerCase()) {
@@ -73,6 +89,11 @@ export const MyResultsScreen = () => {
     found.add('All Subjects');
 
     recentItems.forEach((item: any) => {
+      if (isEliteMockItem(item)) {
+        found.add('Elite Mock');
+        return;
+      }
+
       if (item.exam) {
         found.add(String(item.exam));
       } else {

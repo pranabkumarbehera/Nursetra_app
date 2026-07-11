@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -102,6 +102,7 @@ export const ProfileScreen = ({ navigation }: any) => {
     const [isDeleteVisible, setIsDeleteVisible] = useState(false);
     const [deleteEmail, setDeleteEmail] = useState('');
     const [deleteOtp, setDeleteOtp] = useState('');
+    const redirectingRef = useRef(false);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -165,31 +166,34 @@ export const ProfileScreen = ({ navigation }: any) => {
     };
 
     const handleNavigationReset = () => {
-        resetNavigation({
-            index: 0,
-            routes: [
-                {
-                    name: ROUTES.AUTH_STACK,
-                    state: {
-                        index: 0,
-                        routes: [{ name: ROUTES.LOGIN }],
+        if (redirectingRef.current) {
+            return;
+        }
+
+        redirectingRef.current = true;
+        setTimeout(() => {
+            resetNavigation({
+                index: 0,
+                routes: [
+                    {
+                        name: ROUTES.AUTH_STACK,
+                        state: {
+                            index: 0,
+                            routes: [{ name: ROUTES.LOGIN }],
+                        },
                     },
-                },
-            ],
-        });
+                ],
+            });
+        }, 0);
     };
 
     useEffect(() => {
-        if (logoutResponse === 'logout') {
+        if (!authToken || logoutResponse === 'logout') {
             handleNavigationReset();
+        } else {
+            redirectingRef.current = false;
         }
-    }, [logoutResponse]);
-
-    useEffect(() => {
-        if (!authToken) {
-            handleNavigationReset();
-        }
-    }, [authToken]);
+    }, [authToken, logoutResponse]);
 
     useEffect(() => {
         if (!authToken) return;

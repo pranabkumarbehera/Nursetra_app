@@ -211,6 +211,7 @@ export const normalizeDashboardStats = (dashboard: any) => {
         score: firstDefined(summary?.score, summary?.totalScore, summary?.avgScore, summary?.averageScore, summary?.points),
         accuracy: firstDefined(summary?.accuracy, summary?.accuracyPercentage, summary?.avgAccuracy, summary?.averageAccuracy, calculatedAverageAccuracy),
         timeSpent: firstDefined(summary?.timeSpent, summary?.timeSpend, summary?.timeTaken, summary?.studyTime, summary?.totalTimeSpent),
+        rank: firstDefined(summary?.rank, summary?.allIndiaRank, summary?.air),
     };
 };
 
