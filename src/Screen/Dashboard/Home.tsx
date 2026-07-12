@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
@@ -13,6 +13,8 @@ import { getProfileName, normalizeDashboardStats, normalizeRecentItems, formatPe
 import { Colorpath, Fonts, theme } from '../../Themes';
 import { QUICK_ACTIONS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
+import { CategoriesFAB } from '../../Components/CategoriesFAB';
+import { HomeSkeleton } from '../../Components/LoadingSkeletons';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +43,7 @@ const isEliteMockItem = (item: any) => {
 
 export const HomeScreen = () => {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const homeState = useSelector((state: RootState) => state.HomeReducer);
   const profileState = useSelector((state: RootState) => state.ProfileReducer);
@@ -185,11 +188,12 @@ export const HomeScreen = () => {
 
   if (homeState.isBootstrapping && !homeState.dashboardData) {
     return (
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]} edges={['top', 'left', 'right']}>
         <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent={false} />
-        <View style={styles.loaderWrap}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <HomeSkeleton />
+        </ScrollView>
+        <CategoriesFAB />
       </SafeAreaView>
     );
   }
@@ -320,6 +324,7 @@ export const HomeScreen = () => {
           ) : null}
         </View>
       </ScrollView>
+      <CategoriesFAB />
     </SafeAreaView>
   );
 };
@@ -350,7 +355,7 @@ const styles = StyleSheet.create({
   joinButton: { alignSelf: 'flex-start', backgroundColor: '#FFF', borderRadius: 16, paddingHorizontal: 24, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
   joinButtonText: { color: theme.colors.primary, fontFamily: Fonts.interbold, fontSize: 15 },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 28, gap: 12 },
-  statCard: { width: (width - 52) / 2, borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  statCard: {borderWidth:0.7, borderColor: theme.colors.textLight, width: (width - 52) / 2, borderRadius: 20, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   statIconWrap: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   statInfo: { flex: 1 },
   statValue: { fontFamily: Fonts.interbold, fontSize: 20, marginBottom: 2 },

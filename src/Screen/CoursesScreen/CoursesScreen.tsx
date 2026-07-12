@@ -13,6 +13,8 @@ import constants from '../../Utils/Helpers/constants';
 import { Header } from '../../Components/headers/Header';
 import { Input } from '../../Components/inputs/Input';
 import { Fonts, theme } from '../../Themes';
+import { CategoriesFAB } from '../../Components/CategoriesFAB';
+import { SubjectBankSkeleton } from '../../Components/LoadingSkeletons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useIsFocused } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -2037,6 +2039,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
     const [showDocumentFolderModal, setShowDocumentFolderModal] = useState(false);
     const [selectedDocumentFolderTitle, setSelectedDocumentFolderTitle] = useState('');
     const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+    const [subjectBankSkeletonVisible, setSubjectBankSkeletonVisible] = useState(false);
 
     const authToken = useSelector((state: RootState) => state.AuthReducer.token);
     const { paymentHistoryData, paymentHistoryLoading } = useSelector((state: RootState) => state.ProfileReducer);
@@ -2386,6 +2389,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         return matchesSearch && matchesTab;
     });
     const isEnrollingBundle = isLoading && (status === enrollBundleRequest.type || status === paymentRequest.type);
+    const showSubjectBankSkeleton = isLoading && (status === getBundleListRequest.type || status === getStudentModulesRequest.type);
     const detailScreen = selectedSubBundleExam || selectedExam;
     const showingSubBundle = Boolean(selectedSubBundleExam);
     const canAttemptMocks = Boolean(detailScreen?.isEnrolled);
@@ -2424,6 +2428,24 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         showSubBundleList ||
         getBundleQuizzes(detailScreen?.rawBundle || detailScreen).length,
     );
+
+    useEffect(() => {
+        let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+        if (showSubjectBankSkeleton) {
+            setSubjectBankSkeletonVisible(true);
+        } else {
+            hideTimer = setTimeout(() => {
+                setSubjectBankSkeletonVisible(false);
+            }, 250);
+        }
+
+        return () => {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+        };
+    }, [showSubjectBankSkeleton]);
     const availableDetailTabs = useMemo(
         () => [
             mockContentAvailable ? { key: 'mock', label: 'Mock Bank' } : null,
@@ -3507,8 +3529,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
                         {isLoadingNotePages ? (
                             <View style={styles.noteViewerStateBox}>
-                                <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                <Text style={styles.noteViewerStateText}>Loading pages...</Text>
+                                <SubjectBankSkeleton />
                             </View>
                         ) : selectedNotePages.length === 0 ? (
                             <View style={styles.noteViewerStateBox}>
@@ -3625,8 +3646,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
                         {isLoadingQuestionBank ? (
                             <View style={styles.questionBankLoadingState}>
-                                <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                <Text style={styles.questionBankLoadingText}>Loading questions...</Text>
+                                <SubjectBankSkeleton />
                             </View>
                         ) : selectedQuestionBankQuestions.length === 0 ? (
                             <View style={styles.questionBankEmptyState}>
@@ -3826,8 +3846,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
                         {isLoadingVideoBank ? (
                             <View style={styles.videoBankLoadingState}>
-                                <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                <Text style={styles.videoBankLoadingText}>Loading videos...</Text>
+                                <SubjectBankSkeleton />
                             </View>
                         ) : selectedVideoBankItems.length === 0 ? (
                             <View style={styles.videoBankEmptyState}>
@@ -3898,8 +3917,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
                         {documentLoading ? (
                             <View style={styles.videoBankLoadingState}>
-                                <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                <Text style={styles.videoBankLoadingText}>Loading documents...</Text>
+                                <SubjectBankSkeleton />
                             </View>
                         ) : !documentResponse || documentResponse.length === 0 ? (
                             <View style={styles.videoBankEmptyState}>
@@ -4085,7 +4103,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                     </View>
 
                     <View style={styles.qBankListContainer}>
-                        {moduleOptions.map((title, index) => {
+                        {subjectBankSkeletonVisible ? (
+                            <SubjectBankSkeleton />
+                        ) : moduleOptions.map((title, index) => {
                             const matchingBundles = bundleItems.filter((bundle: any) => {
                                 const bTitle = String(bundle?.title || bundle?.name || '').trim();
                                 const lowerTitle = bTitle.toLowerCase();
@@ -4282,10 +4302,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                         : 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
                                 }
                                 renderLoading={() => (
-                                    <View style={styles.paymentWebViewLoading}>
-                                        <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                        <Text style={styles.paymentWebViewLoadingText}>Loading checkout...</Text>
-                                    </View>
+                                <View style={styles.paymentWebViewLoading}>
+                                    <SubjectBankSkeleton />
+                                </View>
                                 )}
                                 onNavigationStateChange={(navState) => {
                                     const currentUrl = String(navState.url || '');
@@ -4300,14 +4319,15 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                 }}
                             />
                         ) : (
-                            <View style={styles.paymentWebViewLoading}>
-                                <ActivityIndicator size="large" color={Colorpath.Primary} />
-                                <Text style={styles.paymentWebViewLoadingText}>Preparing checkout...</Text>
-                            </View>
+                        <View style={styles.paymentWebViewLoading}>
+                            <SubjectBankSkeleton />
+                        </View>
                         )}
                     </View>
                 </View>
             </Modal>
+
+            <CategoriesFAB />
 
         </SafeAreaView>
     );

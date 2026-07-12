@@ -38,9 +38,10 @@ import {
     getProfileName,
     normalizeProfileData,
 } from '../../Utils/Helpers/home';
-import { CommonActions } from '@react-navigation/native';
 import { ROUTES } from '../../Navigation/RouteNames';
 import { reset as resetNavigation } from '../../Navigation/NavigationService';
+import { CategoriesFAB } from '../../Components/CategoriesFAB';
+import { ProfileSkeleton } from '../../Components/LoadingSkeletons';
 
 type EditableProfile = {
     firstName: string;
@@ -89,6 +90,7 @@ export const ProfileScreen = ({ navigation }: any) => {
     const [form, setForm] = useState<EditableProfile>(DEFAULT_FORM);
     const [imageError, setImageError] = useState(false);
     const [editImageError, setEditImageError] = useState(false);
+    const [profileSkeletonVisible, setProfileSkeletonVisible] = useState(false);
 
     // Account Deletion States
     const {
@@ -226,6 +228,27 @@ export const ProfileScreen = ({ navigation }: any) => {
     );
     const initials = useMemo(() => getInitials(profileName), [profileName]);
     const avatarBackground = useMemo(() => getAvatarBackgroundColor(profileName), [profileName]);
+    const showProfileSkeleton =
+        profileState.status === getProfileRequest.type ||
+        (!profileData && (profileState.isLoading || isAuthLoading));
+
+    useEffect(() => {
+        let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+        if (showProfileSkeleton) {
+            setProfileSkeletonVisible(true);
+        } else {
+            hideTimer = setTimeout(() => {
+                setProfileSkeletonVisible(false);
+            }, 250);
+        }
+
+        return () => {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+            }
+        };
+    }, [showProfileSkeleton]);
 
     useEffect(() => {
         setImageError(false);
@@ -288,6 +311,16 @@ export const ProfileScreen = ({ navigation }: any) => {
     return (
         <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]}>
             <StatusBar barStyle="light-content" backgroundColor={Colorpath.Primary} />
+
+            {profileSkeletonVisible ? (
+                <>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                        <ProfileSkeleton />
+                    </ScrollView>
+                    <CategoriesFAB />
+                </>
+            ) : (
+                <>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                 <LinearGradient colors={HEADER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground}>
@@ -776,6 +809,9 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </View>
                 </View>
             </Modal>
+            <CategoriesFAB />
+                </>
+            )}
         </View>
     );
 };

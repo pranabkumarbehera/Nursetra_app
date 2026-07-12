@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
@@ -9,16 +9,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getMockTestListRequest, getStudentModulesRequest } from '../../Redux/Reducers/MockTestReducer';
 import { RootState } from '../../Redux/Store';
 import { paymentHistoryRequest } from '../../Redux/Reducers/ProfileReducer';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useRoute } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import LinearGradient from 'react-native-linear-gradient';
 import { ROUTES } from '../../Navigation/RouteNames';
-import { NURSING_SUBJECTS } from '../../Utils/Constants/Subjects';
-
-const stopWords = ['and', 'system', 'nursing', 'disorders', 'care', 'management', 'health', 'the', 'of', 'in', 'to', 'for', 'with', 'a', 'an', 'basic', 'general'];
-const getKeywords = (str: string) => {
-    return str.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !stopWords.includes(w));
-};
+import { getApi } from '../../Utils/Helpers/ApiRequest';
+import { CategoriesFAB } from '../../Components/CategoriesFAB';
+import { MockBankSkeleton } from '../../Components/LoadingSkeletons';
 
 const getSubjectTheme = (subjectName: string) => {
     const s = subjectName.toLowerCase();
@@ -39,6 +36,32 @@ const getSubjectTheme = (subjectName: string) => {
     return { icon: 'book-open', colors: ['#667EEA', '#764BA2'] };
 };
 
+const extractItems = (source: any): any[] => {
+    if (Array.isArray(source)) {
+        return source;
+    }
+
+    return (
+        source?.data?.modules ||
+        source?.modules ||
+        source?.data?.items ||
+        source?.items ||
+        source?.data ||
+        []
+    );
+};
+
+const getItemId = (item: any) => String(item?.id || item?._id || item?.moduleId || item?.module_id || '');
+
+const getItemLabel = (item: any, fallback = '') => String(
+    item?.name ||
+    item?.title ||
+    item?.moduleName ||
+    item?.module_name ||
+    item?.label ||
+    fallback
+);
+
 type MockBankScreenProps = {
     navigation: any;
 };
@@ -46,16 +69,23 @@ type MockBankScreenProps = {
 export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
     const dispatch = useDispatch();
     const isFocused = useIsFocused();
+    const route = useRoute<any>();
+    const scrollRef = useRef<ScrollView | null>(null);
+    const routeParams = route?.params || {};
     const { mockTestList, studentModules, isLoading } = useSelector((state: RootState) => state.MockTestReducer);
     const { paymentHistoryData, paymentHistoryLoading } = useSelector((state: RootState) => state.ProfileReducer);
+    const authToken = useSelector((state: RootState) => state.AuthReducer.token);
 
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [selectedMock, setSelectedMock] = useState<any>(null);
-    const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-    const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-
-    const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
-    const [selectedSubModuleId, setSelectedSubModuleId] = useState<string | null>(null);
+    const [categories, setCategories] = useState<Array<{ id: string; label: string; raw: any }>>([]);
+    const [subCategories, setSubCategories] = useState<Array<{ id: string; label: string; raw: any }>>([]);
+    const [loadingCategories, setLoadingCategories] = useState(false);
+    const [loadingSubCategories, setLoadingSubCategories] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState('All Categories');
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [selectedSubCategory, setSelectedSubCategory] = useState('All Sub Categories');
+    const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<string | null>(null);
     const [searchInput, setSearchInput] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -67,22 +97,110 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
     }, [searchInput]);
 
     useEffect(() => {
-        if (isFocused) {
+        if (isFocused && !studentModules) {
+            setLoadingCategories(true);
             dispatch(getStudentModulesRequest({}));
+        }
+
+        if (isFocused && !paymentHistoryData) {
             dispatch(paymentHistoryRequest({ page: 1, limit: 100 }));
         }
-    }, [dispatch, isFocused]);
+    }, [dispatch, isFocused, paymentHistoryData, studentModules]);
+
+    useEffect(() => {
+        const routeCategoryId = routeParams?.selectedCategoryId != null ? String(routeParams.selectedCategoryId) : null;
+        const routeSubCategoryId = routeParams?.selectedSubCategoryId != null ? String(routeParams.selectedSubCategoryId) : null;
+
+        if (routeCategoryId) {
+            setSelectedCategory('All Categories');
+            setSelectedSubCategory('All Sub Categories');
+            setSelectedCategoryId(routeCategoryId);
+            setSelectedSubCategoryId(routeSubCategoryId);
+            requestAnimationFrame(() => {
+                scrollRef.current?.scrollTo({ y: 0, animated: true });
+            });
+        }
+    }, [routeParams?.selectedCategoryId, routeParams?.selectedSubCategoryId]);
+
+    useEffect(() => {
+        const items = extractItems(studentModules);
+        if (items.length > 0) {
+            setCategories(
+                items
+                    .map((item: any, idx: number) => ({
+                        id: getItemId(item) || String(idx),
+                        label: getItemLabel(item, `Category ${idx + 1}`),
+                        raw: item,
+                    }))
+                    .filter((item: any) => item.id),
+            );
+        }
+        setLoadingCategories(false);
+    }, [studentModules]);
+
+    useEffect(() => {
+        let active = true;
+
+        const loadSubCategories = async () => {
+            if (!selectedCategoryId) {
+                setSubCategories([]);
+                setLoadingSubCategories(false);
+                return;
+            }
+
+            setLoadingSubCategories(true);
+
+            try {
+                const response = await getApi(
+                    `student/sub-modules?moduleId=${encodeURIComponent(selectedCategoryId)}`,
+                    {
+                        authorization: authToken,
+                    },
+                );
+
+                if (!active) {
+                    return;
+                }
+
+                const items = extractItems(response?.data);
+                setSubCategories(
+                    items
+                        .map((item: any, idx: number) => ({
+                            id: getItemId(item) || String(idx),
+                            label: getItemLabel(item, `Sub Category ${idx + 1}`),
+                            raw: item,
+                        }))
+                        .filter((item: any) => item.id),
+                );
+            } catch (error: any) {
+                if (active) {
+                    setSubCategories([]);
+                    Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to fetch sub-categories' });
+                }
+            } finally {
+                if (active) {
+                    setLoadingSubCategories(false);
+                }
+            }
+        };
+
+        loadSubCategories();
+
+        return () => {
+            active = false;
+        };
+    }, [authToken, selectedCategoryId]);
 
     useEffect(() => {
         const params: any = {};
-        if (selectedModuleId) params.moduleId = selectedModuleId;
-        if (selectedSubModuleId) params.subModuleId = selectedSubModuleId;
+        if (selectedCategoryId) params.moduleId = selectedCategoryId;
+        if (selectedSubCategoryId) params.subModuleId = selectedSubCategoryId;
         if (debouncedSearch) params.search = debouncedSearch;
 
         dispatch(getMockTestListRequest(params));
-    }, [dispatch, selectedModuleId, selectedSubModuleId, debouncedSearch]);
+    }, [dispatch, selectedCategoryId, selectedSubCategoryId, debouncedSearch]);
 
-    const { enrolledBundleIds, failedPendingBundleIds } = useMemo(() => {
+    const { enrolledBundleIds } = useMemo(() => {
         const collectedIds = studentModules?.data?.modules || studentModules?.modules || studentModules?.data || (Array.isArray(studentModules) ? studentModules : []);
         const paymentsList = paymentHistoryData?.data?.items || paymentHistoryData?.items || [];
         const failedPending = new Set<string>();
@@ -136,15 +254,6 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         };
     }, [studentModules, paymentHistoryData]);
 
-    const rawModules = studentModules?.data?.modules || studentModules?.modules || studentModules?.data || (Array.isArray(studentModules) ? studentModules : []);
-    const modules = rawModules.filter((m: any) => {
-        const id = String(m?.id || m?._id || '');
-        return enrolledBundleIds.includes(id);
-    });
-
-    const activeModuleObj = modules.find((m: any) => String(m?.id || m?._id) === String(selectedModuleId));
-    const subModules = activeModuleObj?.subModules || activeModuleObj?.sub_modules || activeModuleObj?.submodules || activeModuleObj?.childModules || activeModuleObj?.children || [];
-
     const rawData = Array.isArray(mockTestList)
         ? mockTestList
         : mockTestList?.data || mockTestList?.quizzes || mockTestList?.items || [];
@@ -168,32 +277,23 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         const price = Number(mock?.price || mock?.quiz?.price || 0);
 
         // Find if this mock test belongs to any module that is enrolled
-        const mockModuleId = String(mock?.moduleId || mock?.quiz?.moduleId || mock?.bundleId || mock?.quiz?.bundleId || mock?.module?._id || mock?.module?.id || selectedModuleId || '');
+        const mockModuleId = String(mock?.moduleId || mock?.quiz?.moduleId || mock?.bundleId || mock?.quiz?.bundleId || mock?.module?._id || mock?.module?.id || selectedCategoryId || '');
         const isUnlocked = mockModuleId ? enrolledBundleIds.includes(mockModuleId) : false;
 
-        let finalSubject = mock.subjects || mock.description || mock?.quiz?.description;
-        if (!finalSubject || finalSubject === 'General Syllabus') {
-            const mTitle = String(mock.title || mock?.quiz?.title || '').toLowerCase();
-            let matchedSubject = 'General Syllabus';
-            for (const subj of NURSING_SUBJECTS) {
-                const sNameLower = subj.name.toLowerCase();
-                if (mTitle.includes(sNameLower)) {
-                    matchedSubject = subj.name;
-                    break;
-                }
-                const hasTopic = subj.topics.some(t => {
-                    const tLower = t.toLowerCase();
-                    if (mTitle.includes(tLower)) return true;
-                    const kws = getKeywords(tLower);
-                    return kws.length > 0 && kws.some(k => mTitle.includes(k));
-                });
-                if (hasTopic) {
-                    matchedSubject = subj.name;
-                    break;
-                }
-            }
-            finalSubject = matchedSubject;
-        }
+        const finalSubject =
+            mock.subjects ||
+            mock.subject ||
+            mock.category ||
+            mock.categoryName ||
+            mock.moduleName ||
+            mock?.module?.name ||
+            mock?.module?.title ||
+            mock?.quiz?.moduleName ||
+            mock?.quiz?.module?.name ||
+            mock?.quiz?.module?.title ||
+            mock.description ||
+            mock?.quiz?.description ||
+            'General Syllabus';
 
         return {
             id: mock.id || mock._id || mock.testId,
@@ -210,67 +310,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
             originalData: mock
         };
     });
-
-    const activeSubjectObj = NURSING_SUBJECTS.find(s => s.name === selectedSubject);
-
-    const filteredData = displayData.filter((mock: any) => {
-        let matchesSubject = true;
-        let matchesTopic = true;
-
-        const mockSubj = String(mock.subjects || '').toLowerCase();
-        const mockTopic = String(mock.topics || '').toLowerCase();
-        const mockTitle = String(mock.title || '').toLowerCase();
-
-        if (selectedSubject) {
-            const filterSubj = selectedSubject.toLowerCase();
-
-            let isMatch = mockSubj === filterSubj || mockSubj.includes(filterSubj) || mockTitle.includes(filterSubj);
-
-            // If the title or subjects includes ANY of the topics for this subject, it belongs to this subject
-            if (!isMatch && activeSubjectObj) {
-                const hasTopicMatch = activeSubjectObj.topics.some((t: string) => {
-                    const tLower = t.toLowerCase();
-                    if (mockTitle.includes(tLower) || mockSubj.includes(tLower)) return true;
-                    // Fuzzy match the topic keywords
-                    const topicKeywords = getKeywords(tLower);
-                    if (topicKeywords.length > 0 && topicKeywords.some(kw => mockTitle.includes(kw))) {
-                        return true;
-                    }
-                    return false;
-                });
-                if (hasTopicMatch) {
-                    isMatch = true;
-                }
-            }
-
-            // Fallback: check significant words of the subject name
-            if (!isMatch) {
-                const words = getKeywords(filterSubj);
-                if (words.length > 0 && words.some(w => mockSubj.includes(w) || mockTitle.includes(w))) {
-                    isMatch = true;
-                }
-            }
-
-            matchesSubject = isMatch;
-        }
-
-        if (selectedTopic) {
-            const filterTopic = selectedTopic.toLowerCase();
-
-            let isMatch = mockTopic === filterTopic || mockTopic.includes(filterTopic) || mockTitle.includes(filterTopic);
-
-            if (!isMatch) {
-                const words = getKeywords(filterTopic);
-                if (words.length > 0 && words.some(w => mockTopic.includes(w) || mockTitle.includes(w))) {
-                    isMatch = true;
-                }
-            }
-
-            matchesTopic = isMatch;
-        }
-
-        return matchesSubject && matchesTopic;
-    });
+    const filteredData = displayData;
 
     const handleStartTest = (mock: any) => {
         if (mock.type === 'premium' && !mock.isUnlocked) {
@@ -280,6 +320,8 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
             navigation.navigate(ROUTES.MOCK_TEST_RULES, { testId: mock.id });
         }
     };
+
+    const showLoadingSkeleton = isLoading || loadingCategories || loadingSubCategories || paymentHistoryLoading;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -291,7 +333,10 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                 </Pressable>
                 <Text style={styles.headerTitleInline}>Test Series & Exam Mock </Text>
             </View>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {showLoadingSkeleton ? (
+                <MockBankSkeleton />
+            ) : (
+            <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <Text style={styles.sectionSubtitle}>Practice with real exam scenarios.</Text>
 
                 {/* Search Bar */}
@@ -311,68 +356,9 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                     )}
                 </View>
 
-                {/* Modules Filter */}
-                {modules.length > 0 && (
-                    <View style={styles.filterSection}>
-                        <Text style={styles.filterLabel}>Modules</Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.horizontalScrollStyle}
-                        >
-                            <Pressable
-                                style={[
-                                    styles.filterPill,
-                                    selectedModuleId === null && styles.filterPillActive,
-                                ]}
-                                onPress={() => {
-                                    setSelectedModuleId(null);
-                                    setSelectedSubModuleId(null);
-                                }}
-                            >
-                                <Text
-                                    style={[
-                                        styles.filterPillText,
-                                        selectedModuleId === null && styles.filterPillTextActive,
-                                    ]}
-                                >
-                                    All Modules
-                                </Text>
-                            </Pressable>
-                            {modules.map((m: any, idx: number) => {
-                                const moduleId = m?.id || m?._id || String(idx);
-                                const moduleName = m?.name || m?.title || `Module ${idx + 1}`;
-                                const isSelected = String(selectedModuleId) === String(moduleId);
-                                return (
-                                    <Pressable
-                                        key={moduleId}
-                                        style={[
-                                            styles.filterPill,
-                                            isSelected && styles.filterPillActive,
-                                        ]}
-                                        onPress={() => {
-                                            setSelectedModuleId(String(moduleId));
-                                            setSelectedSubModuleId(null);
-                                        }}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.filterPillText,
-                                                isSelected && styles.filterPillTextActive,
-                                            ]}
-                                        >
-                                            {moduleName}
-                                        </Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </ScrollView>
-                    </View>
-                )}
-
-                {/* Subjects Filter */}
+                {/* Categories Filter */}
                 <View style={styles.filterSection}>
-                    <Text style={styles.filterLabel}>Subjects</Text>
+                    <Text style={styles.filterLabel}>Categories</Text>
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -381,34 +367,41 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                         <Pressable
                             style={[
                                 styles.filterPill,
-                                selectedSubject === null && styles.filterPillActive,
+                                selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillActive,
                             ]}
                             onPress={() => {
-                                setSelectedSubject(null);
-                                setSelectedTopic(null);
+                                setSelectedCategory('All Categories');
+                                setSelectedCategoryId(null);
+                                setSelectedSubCategory('All Sub Categories');
+                                setSelectedSubCategoryId(null);
+                                setSubCategories([]);
                             }}
                         >
                             <Text
                                 style={[
                                     styles.filterPillText,
-                                    selectedSubject === null && styles.filterPillTextActive,
+                                    selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillTextActive,
                                 ]}
                             >
-                                All Subjects
+                                All Categories
                             </Text>
                         </Pressable>
-                        {NURSING_SUBJECTS.map((sub: any, idx: number) => {
-                            const isSelected = selectedSubject === sub.name;
+                        {categories.map((category: any) => {
+                            const isSelected =
+                                String(selectedCategoryId) === String(category.id) ||
+                                selectedCategory === category.label;
                             return (
                                 <Pressable
-                                    key={idx}
+                                    key={category.id}
                                     style={[
                                         styles.filterPill,
                                         isSelected && styles.filterPillActive,
                                     ]}
                                     onPress={() => {
-                                        setSelectedSubject(sub.name);
-                                        setSelectedTopic(null);
+                                        setSelectedCategory(category.label);
+                                        setSelectedCategoryId(String(category.id));
+                                        setSelectedSubCategory('All Sub Categories');
+                                        setSelectedSubCategoryId(null);
                                     }}
                                 >
                                     <Text
@@ -417,7 +410,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                                             isSelected && styles.filterPillTextActive,
                                         ]}
                                     >
-                                        {sub.name}
+                                        {category.label}
                                     </Text>
                                 </Pressable>
                             );
@@ -425,64 +418,63 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                     </ScrollView>
                 </View>
 
-                {/* Topics Filter */}
-                {activeSubjectObj && activeSubjectObj.topics.length > 0 && (
-                    <View style={styles.filterSection}>
-                        <Text style={styles.filterLabel}>Topics</Text>
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            contentContainerStyle={styles.horizontalScrollStyle}
+                {/* Sub Categories Filter */}
+                <View style={styles.filterSection}>
+                    <Text style={styles.filterLabel}>Sub Categories</Text>
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.horizontalScrollStyle}
+                    >
+                        <Pressable
+                            style={[
+                                styles.filterPill,
+                                selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillActive,
+                            ]}
+                            onPress={() => setSelectedSubCategory('All Sub Categories')}
                         >
-                            <Pressable
+                            <Text
                                 style={[
-                                    styles.filterPill,
-                                    selectedTopic === null && styles.filterPillActive,
+                                    styles.filterPillText,
+                                    selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillTextActive,
                                 ]}
-                                onPress={() => setSelectedTopic(null)}
                             >
-                                <Text
+                                All Sub Categories
+                            </Text>
+                        </Pressable>
+                        {subCategories.map((subCategory: any) => {
+                            const isSelected =
+                                String(selectedSubCategoryId) === String(subCategory.id) ||
+                                selectedSubCategory === subCategory.label;
+                            return (
+                                <Pressable
+                                    key={subCategory.id}
                                     style={[
-                                        styles.filterPillText,
-                                        selectedTopic === null && styles.filterPillTextActive,
+                                        styles.filterPill,
+                                        isSelected && styles.filterPillActive,
                                     ]}
+                                    onPress={() => {
+                                        setSelectedSubCategory(subCategory.label);
+                                        setSelectedSubCategoryId(String(subCategory.id));
+                                    }}
                                 >
-                                    All Topics
-                                </Text>
-                            </Pressable>
-                            {activeSubjectObj.topics.map((topic: string, idx: number) => {
-                                const isSelected = selectedTopic === topic;
-                                return (
-                                    <Pressable
-                                        key={idx}
+                                    <Text
                                         style={[
-                                            styles.filterPill,
-                                            isSelected && styles.filterPillActive,
+                                            styles.filterPillText,
+                                            isSelected && styles.filterPillTextActive,
                                         ]}
-                                        onPress={() => setSelectedTopic(topic)}
                                     >
-                                        <Text
-                                            style={[
-                                                styles.filterPillText,
-                                                isSelected && styles.filterPillTextActive,
-                                            ]}
-                                        >
-                                            {topic}
-                                        </Text>
-                                    </Pressable>
-                                );
-                            })}
-                        </ScrollView>
-                    </View>
-                )}
+                                        {subCategory.label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
 
-                {isLoading ? (
-                    <View style={{ marginTop: verticalScale(40), alignItems: 'center' }}>
-                        <Text style={{ color: '#6B7280' }}>Loading tests...</Text>
-                    </View>
-                ) : filteredData.length === 0 ? (
-                    <View style={{ marginTop: verticalScale(40), alignItems: 'center' }}>
-                        <Text style={{ color: '#6B7280' }}>No tests available right now.</Text>
+                {filteredData.length === 0 ? (
+                    <View style={styles.centerLoadingState}>
+                        <Text style={styles.loadingStateText}>No tests available right now.</Text>
                     </View>
                 ) : filteredData.map((mock: any, i: number) => {
                     const theme = getSubjectTheme(mock.subjects);
@@ -537,6 +529,8 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
 
                 <View style={{ height: verticalScale(100) }} />
             </ScrollView>
+            )}
+            <CategoriesFAB />
 
             <Modal visible={showPaymentModal} animationType="slide" transparent={true}>
                 <View style={styles.modalOverlay}>
@@ -722,6 +716,21 @@ const styles = StyleSheet.create({
     },
     filterPillTextActive: {
         color: '#FFFFFF',
+    },
+    centerLoadingState: {
+        marginTop: verticalScale(40),
+        alignItems: 'center',
+    },
+    loadingStateText: {
+        color: '#6B7280',
+    },
+    inlineLoadingState: {
+        justifyContent: 'center',
+        paddingHorizontal: normalize(8),
+    },
+    inlineLoadingText: {
+        color: '#6B7280',
+        fontSize: normalize(12),
     },
 });
 
