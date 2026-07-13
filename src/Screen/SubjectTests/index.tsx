@@ -16,6 +16,7 @@ import { ROUTES } from '../../Navigation/RouteNames';
 import { getApi } from '../../Utils/Helpers/ApiRequest';
 import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { MockBankSkeleton } from '../../Components/LoadingSkeletons';
+import { NURSING_ACCESS_DURATION_LABEL, NURSING_ACCESS_EXPIRY_LABEL, getNursingSubjectName, sortNursingSubjects } from '../../Utils/Constants/Subjects';
 
 const getSubjectTheme = (subjectName: string) => {
     const s = subjectName.toLowerCase();
@@ -61,6 +62,9 @@ const getItemLabel = (item: any, fallback = '') => String(
     item?.label ||
     fallback
 );
+
+const ACCESS_DURATION_LABEL = NURSING_ACCESS_DURATION_LABEL;
+const ACCESS_EXPIRY_LABEL = NURSING_ACCESS_EXPIRY_LABEL;
 
 type MockBankScreenProps = {
     navigation: any;
@@ -126,13 +130,16 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         const items = extractItems(studentModules);
         if (items.length > 0) {
             setCategories(
-                items
-                    .map((item: any, idx: number) => ({
-                        id: getItemId(item) || String(idx),
-                        label: getItemLabel(item, `Category ${idx + 1}`),
-                        raw: item,
-                    }))
-                    .filter((item: any) => item.id),
+                sortNursingSubjects(
+                    items
+                        .map((item: any, idx: number) => ({
+                            id: getItemId(item) || String(idx),
+                            label: getNursingSubjectName(getItemLabel(item, `Category ${idx + 1}`)),
+                            raw: item,
+                        }))
+                        .filter((item: any) => item.id),
+                    (item) => item.label,
+                ),
             );
         }
         setLoadingCategories(false);
@@ -164,13 +171,16 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
 
                 const items = extractItems(response?.data);
                 setSubCategories(
-                    items
-                        .map((item: any, idx: number) => ({
-                            id: getItemId(item) || String(idx),
-                            label: getItemLabel(item, `Sub Category ${idx + 1}`),
-                            raw: item,
-                        }))
-                        .filter((item: any) => item.id),
+                    sortNursingSubjects(
+                        items
+                            .map((item: any, idx: number) => ({
+                                id: getItemId(item) || String(idx),
+                                label: getNursingSubjectName(getItemLabel(item, `Sub Category ${idx + 1}`)),
+                                raw: item,
+                            }))
+                            .filter((item: any) => item.id),
+                        (item) => item.label,
+                    ),
                 );
             } catch (error: any) {
                 if (active) {
@@ -515,8 +525,15 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                                     <Text style={styles.cardMetaValue}>{mock.fullMarks}</Text>
                                 </View>
                                 <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Time</Text>
-                                    <Text style={styles.cardMetaValue}>{mock.duration} Mins</Text>
+                                    <Text style={styles.cardMetaLabel}>Time Duration</Text>
+                                    <Text style={styles.cardMetaValue}>{ACCESS_DURATION_LABEL}</Text>
+                                </View>
+                                <View style={styles.cardMetaItem}>
+                                    <Text style={styles.cardMetaLabel}>Expiry</Text>
+                                    <View style={styles.cardMetaExpiryRow}>
+                                        <Icon name="x" size={normalize(12)} color="#DC2626" />
+                                        <Text style={styles.cardMetaExpiryText}>{ACCESS_EXPIRY_LABEL}</Text>
+                                    </View>
                                 </View>
                                 <View style={styles.cardMetaItem}>
                                     <Text style={styles.cardMetaLabel}>Negative marking</Text>
@@ -648,6 +665,16 @@ const styles = StyleSheet.create({
         fontSize: normalize(13),
         color: '#111827',
         fontWeight: '600'
+    },
+    cardMetaExpiryRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    cardMetaExpiryText: {
+        fontSize: normalize(13),
+        color: '#111827',
+        fontWeight: '600',
+        marginLeft: normalize(4),
     },
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },
     modalBg: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)' },

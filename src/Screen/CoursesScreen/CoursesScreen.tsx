@@ -15,6 +15,7 @@ import { Input } from '../../Components/inputs/Input';
 import { Fonts, theme } from '../../Themes';
 import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { SubjectBankSkeleton } from '../../Components/LoadingSkeletons';
+import { getNursingSubjectName, getNursingSubjectOrder } from '../../Utils/Constants/Subjects';
 import { useDispatch, useSelector } from 'react-redux';
 import { useIsFocused } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -87,6 +88,7 @@ const SEGMENT_THEMES = [
 ];
 
 const MIN_SUBJECTS_FOR_CATEGORY_EXAM = 2;
+const CONTENT_ACCESS_DURATION_LABEL = 'No Expiry';
 
 const getCategoryIconName = (title: string, tab: 'subject' | 'exam') => {
     const value = String(title || '').toLowerCase();
@@ -114,6 +116,18 @@ const getCategoryIconName = (title: string, tab: 'subject' | 'exam') => {
 
     return 'library-outline';
 };
+
+const sortNursingTitles = (titles: string[]) =>
+    [...titles].sort((left, right) => {
+        const leftOrder = getNursingSubjectOrder(left);
+        const rightOrder = getNursingSubjectOrder(right);
+
+        if (leftOrder !== rightOrder) {
+            return leftOrder - rightOrder;
+        }
+
+        return left.localeCompare(right);
+    });
 
 const normalizeTitle = (value: string = '') =>
     value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -1754,17 +1768,42 @@ const QBankBundleCard = ({ bundle, index, isEnrolled, isPending, onView, onEnrol
                     </LinearGradient>
                 )}
                 <View style={smallCardStyles.infoContainer}>
-                    <Text style={smallCardStyles.title} numberOfLines={2}>{title}</Text>
-                    {!isEnrolled && (
-                        <View style={smallCardStyles.priceRow}>
-                            <Text style={smallCardStyles.finalPrice}>
-                                {pricing.isFree ? 'Free' : `₹${pricing.finalPrice}`}
-                            </Text>
-                            {!pricing.isFree && pricing.originalPrice > pricing.finalPrice && (
-                                <Text style={smallCardStyles.originalPrice}>₹{pricing.originalPrice}</Text>
-                            )}
+                    <View style={smallCardStyles.detailStack}>
+                        <View style={smallCardStyles.detailRow}>
+                            <View style={[smallCardStyles.detailIconWrap, { backgroundColor: 'rgba(79, 70, 229, 0.10)' }]}>
+                                <Feather name="tag" size={normalize(12)} color="#4F46E5" />
+                            </View>
+                            <View style={smallCardStyles.detailTextWrap}>
+                                <Text style={smallCardStyles.detailLabel}>Name</Text>
+                                <Text style={smallCardStyles.detailValue} numberOfLines={2}>{title}</Text>
+                            </View>
                         </View>
-                    )}
+
+                        <View style={smallCardStyles.detailRow}>
+                            <View style={[smallCardStyles.detailIconWrap, { backgroundColor: 'rgba(16, 185, 129, 0.10)' }]}>
+                                <FontAwesome5 name="rupee-sign" size={normalize(11)} color="#10B981" />
+                            </View>
+                            <View style={smallCardStyles.detailTextWrap}>
+                                <Text style={smallCardStyles.detailLabel}>Price</Text>
+                                <View style={smallCardStyles.priceValueRow}>
+                                    <Text style={smallCardStyles.detailValue}>{pricing.isFree ? 'Free' : `₹${pricing.finalPrice}`}</Text>
+                                    {!pricing.isFree && pricing.originalPrice > pricing.finalPrice && (
+                                        <Text style={smallCardStyles.originalPrice}>₹{pricing.originalPrice}</Text>
+                                    )}
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={smallCardStyles.detailRow}>
+                            <View style={[smallCardStyles.detailIconWrap, { backgroundColor: 'rgba(15, 118, 110, 0.10)' }]}>
+                                <Feather name="clock" size={normalize(12)} color="#0F766E" />
+                            </View>
+                            <View style={smallCardStyles.detailTextWrap}>
+                                <Text style={smallCardStyles.detailLabel}>Time Duration</Text>
+                                <Text style={smallCardStyles.detailValue}>{CONTENT_ACCESS_DURATION_LABEL}</Text>
+                            </View>
+                        </View>
+                    </View>
                 </View>
             </View>
 
@@ -1866,16 +1905,51 @@ const smallCardStyles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
-    finalPrice: {
-        fontSize: normalize(15),
+    detailStack: {
+        gap: verticalScale(10),
+        marginTop: verticalScale(2),
+    },
+    detailRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+    },
+    detailIconWrap: {
+        width: normalize(24),
+        height: normalize(24),
+        borderRadius: normalize(8),
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: normalize(8),
+        marginTop: verticalScale(1),
+    },
+    detailTextWrap: {
+        flex: 1,
+    },
+    detailLabel: {
+        fontSize: normalize(10),
+        color: '#64748B',
         fontWeight: '700',
-        color: '#10B981',
-        marginRight: normalize(6),
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    detailValue: {
+        fontSize: normalize(13),
+        color: '#0F172A',
+        fontWeight: '800',
+        lineHeight: normalize(18),
+        marginTop: verticalScale(2),
+    },
+    priceValueRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: normalize(6),
     },
     originalPrice: {
         fontSize: normalize(12),
         color: '#94A3B8',
         textDecorationLine: 'line-through',
+        fontWeight: '600',
     },
     actionsRow: {
         flexDirection: 'row',
@@ -2158,7 +2232,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                 let subjectLabel = bundle?.subject || bundle?.module || bundle?.category;
                 if (!subjectLabel) subjectLabel = title || 'Other';
 
-                const finalLabel = String(subjectLabel).trim();
+                const finalLabel = getNursingSubjectName(String(subjectLabel).trim());
                 if (finalLabel) subjects.add(finalLabel);
             }
         });
@@ -2166,7 +2240,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         if (mainTab === 'exam') {
             return apiCategories.length > 0 ? apiCategories : Array.from(dynamicExams);
         }
-        return Array.from(subjects);
+        return sortNursingTitles(Array.from(subjects));
     }, [bundleItems, mainTab]);
 
     const moduleOptions = useMemo(() => {
@@ -4126,7 +4200,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                     let subjectLabel = bundle?.subject || bundle?.module || bundle?.category;
                                     if (!subjectLabel) subjectLabel = bTitle || 'Other';
 
-                                    return String(subjectLabel).trim() === title;
+                                    return getNursingSubjectName(String(subjectLabel).trim()) === title;
                                 }
                             });
 

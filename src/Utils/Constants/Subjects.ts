@@ -264,3 +264,69 @@ export const NURSING_SUBJECTS = [
         ]
     }
 ];
+
+const normalizeSubjectKey = (value: string = '') =>
+    String(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+
+const NURSING_SUBJECT_ORDER = new Map(
+    NURSING_SUBJECTS.map((subject, index) => [normalizeSubjectKey(subject.name), index] as const),
+);
+
+const NURSING_SUBJECT_ALIASES = new Map<string, string>([
+    ['anatomy physiology', 'Anatomy & Physiology'],
+    ['anatomy and physiology', 'Anatomy & Physiology'],
+    ['antamoty physiology', 'Anatomy & Physiology'],
+    ['antamoty and physiology', 'Anatomy & Physiology'],
+    ['antamoty physiology nursing', 'Anatomy & Physiology'],
+]);
+
+export const getNursingSubjectName = (value: string = '') => {
+    const normalizedValue = normalizeSubjectKey(value);
+
+    const alias = NURSING_SUBJECT_ALIASES.get(normalizedValue);
+    if (alias) {
+        return alias;
+    }
+
+    for (const subject of NURSING_SUBJECTS) {
+        if (normalizeSubjectKey(subject.name) === normalizedValue) {
+            return subject.name;
+        }
+    }
+
+    return String(value || '').trim();
+};
+
+export const getNursingSubjectOrder = (value: string = '') => {
+    const normalizedValue = normalizeSubjectKey(value);
+    return NURSING_SUBJECT_ORDER.get(normalizedValue) ?? Number.MAX_SAFE_INTEGER;
+};
+
+export const sortNursingSubjects = <T extends Record<string, any>>(items: T[], getLabel: (item: T) => string) => {
+    return [...items]
+        .map((item, index) => ({
+            item,
+            index,
+            label: getNursingSubjectName(getLabel(item)),
+        }))
+        .sort((left, right) => {
+            const leftOrder = getNursingSubjectOrder(left.label);
+            const rightOrder = getNursingSubjectOrder(right.label);
+
+            if (leftOrder !== rightOrder) {
+                return leftOrder - rightOrder;
+            }
+
+            return left.index - right.index;
+        })
+        .map(({ item, label }) => ({
+            ...item,
+            label,
+        })) as T[];
+};
+
+export const NURSING_ACCESS_DURATION_LABEL = 'No Expiry';
+export const NURSING_ACCESS_EXPIRY_LABEL = 'No Expiry';

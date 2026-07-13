@@ -22,6 +22,7 @@ import { RootState } from '../Redux/Store';
 import { CategoriesModalSkeleton, SkeletonBlock, SkeletonLine } from './LoadingSkeletons';
 import { ROUTES } from '../Navigation/RouteNames';
 import { useSelector } from 'react-redux';
+import { getNursingSubjectName, sortNursingSubjects } from '../Utils/Constants/Subjects';
 
 type CategoryItem = {
     id: string;
@@ -266,14 +267,17 @@ export const CategoriesFAB = memo(({ bottomOffset = 20, rightOffset = 20 }: Cate
 
         setLoadingCategories(true);
         try {
-            const response = await getApi('student/modules', { authorization: authToken });
-            const items = extractItems(response?.data)
+        const response = await getApi('student/modules', { authorization: authToken });
+            const items = sortNursingSubjects(
+                extractItems(response?.data)
                 .map((item: any, index: number) => ({
                     id: getItemId(item, index),
-                    label: getItemLabel(item, `Category ${index + 1}`),
+                    label: getNursingSubjectName(getItemLabel(item, `Category ${index + 1}`)),
                     raw: item,
                 }))
-                .filter((item: CategoryItem) => item.id);
+                .filter((item: CategoryItem) => item.id),
+                (item) => item.label,
+            );
             categoriesCache = items;
             setCategories(items);
             return items;
@@ -298,13 +302,16 @@ export const CategoriesFAB = memo(({ bottomOffset = 20, rightOffset = 20 }: Cate
         setSubCategoryError(null);
         try {
             const response = await getApi(`student/sub-modules?moduleId=${encodeURIComponent(moduleId)}`, { authorization: authToken });
-            const items = extractItems(response?.data)
+            const items = sortNursingSubjects(
+                extractItems(response?.data)
                 .map((item: any, index: number) => ({
                     id: getItemId(item, index),
-                    label: getItemLabel(item, `Sub Category ${index + 1}`),
+                    label: getNursingSubjectName(getItemLabel(item, `Sub Category ${index + 1}`)),
                     raw: item,
                 }))
-                .filter((item: CategoryItem) => item.id);
+                .filter((item: CategoryItem) => item.id),
+                (item) => item.label,
+            );
             subCategoriesCache.set(moduleId, items);
             setSubCategories(items);
             return items;
