@@ -19,6 +19,7 @@ import { HomeSkeleton } from '../../Components/LoadingSkeletons';
 const { width } = Dimensions.get('window');
 
 const actionIcons: Record<string, string> = {
+  '7': 'layers',
   '1': 'flash',
   '2': 'book',
   '3': 'document-text',
@@ -170,7 +171,7 @@ export const HomeScreen = () => {
   }, [mockTestState.status, pendingItem]);
 
   const resolveRoute = (route: string) => {
-    if ([ROUTES.HOME, ROUTES.SUBJECT_TESTS, ROUTES.SUBJECT_TESTS, ROUTES.SUBJECT_TESTS, ROUTES.PROFILE].includes(route as never)) {
+    if ([ROUTES.HOME, ROUTES.SUBJECT_TESTS, ROUTES.COURSE_SCREEN, ROUTES.SUBJECT_TESTS, ROUTES.PROFILE].includes(route as never)) {
       return route;
     }
     if (route === ROUTES.MOCK_TESTS || route === ROUTES.RAPID_REVISION) {

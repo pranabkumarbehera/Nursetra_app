@@ -15,7 +15,7 @@ import { Input } from '../../Components/inputs/Input';
 import { Fonts, theme } from '../../Themes';
 import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { SubjectBankSkeleton } from '../../Components/LoadingSkeletons';
-import { getNursingSubjectName, getNursingSubjectOrder } from '../../Utils/Constants/Subjects';
+import { FREE_MOCK_BUNDLE_NAME, getNursingSubjectName, getNursingSubjectOrder } from '../../Utils/Constants/Subjects';
 import { useDispatch, useSelector } from 'react-redux';
 import { useIsFocused } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -264,6 +264,20 @@ const isEliteMockBundle = (bundle: any) => {
         normalizedCategory.includes('elite mock bundle') ||
         normalizedCategory.includes('elite mock') ||
         normalizedCategory.includes('mock bundle')
+    );
+};
+
+const isFreeMockBundle = (bundle: any) => {
+    const payload = getBundlePayload(bundle);
+    const normalizedTitle = normalizeTitle(String(payload?.title || payload?.name || ''));
+    const normalizedCategory = normalizeTitle(String(payload?.category || ''));
+    const freeMockBundleKey = normalizeTitle(FREE_MOCK_BUNDLE_NAME);
+
+    return (
+        normalizedTitle === freeMockBundleKey ||
+        normalizedTitle.includes(freeMockBundleKey) ||
+        normalizedCategory === freeMockBundleKey ||
+        normalizedCategory.includes(freeMockBundleKey)
     );
 };
 
@@ -2213,8 +2227,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
             const title = String(bundle?.title || bundle?.name || '').trim();
             const lowerTitle = title.toLowerCase();
             const category = String(bundle?.category || '').toLowerCase();
+            const isFreeMock = isFreeMockBundle(bundle);
 
-            const isExam = isEliteMockBundle(bundle) || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
+            const isExam = !isFreeMock && (isEliteMockBundle(bundle) || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase())));
 
             if (isExam) {
                 // If we need to fallback when API has no categories
@@ -2455,10 +2470,20 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         });
     }, [purchasedSubjectCount]);
 
+    const showCategoryExamContentLockedToast = useCallback((contentName: string) => {
+        const lockedName = contentName || 'This content';
+        Toast.show({
+            type: 'info',
+            text1: `${lockedName} is locked`,
+            text2: `Buy at least ${MIN_SUBJECTS_FOR_CATEGORY_EXAM} subjects to access it. You have purchased ${purchasedSubjectCount} subject${purchasedSubjectCount === 1 ? '' : 's'} so far.`,
+        });
+    }, [purchasedSubjectCount]);
+
     const filteredExams = bundleItems.filter((bundle: any) => {
         const title = (bundle?.title || bundle?.name || '').toLowerCase();
         const matchesSearch = title.includes(searchQuery.toLowerCase());
-        const isExam = title.includes('norcet') || title.includes('cho') || (bundle?.category && (bundle.category.toLowerCase().includes('norcet') || bundle.category.toLowerCase().includes('cho')));
+        const isFreeMock = isFreeMockBundle(bundle);
+        const isExam = !isFreeMock && (title.includes('norcet') || title.includes('cho') || (bundle?.category && (bundle.category.toLowerCase().includes('norcet') || bundle.category.toLowerCase().includes('cho'))));
         const matchesTab = mainTab === 'exam' ? isExam : !isExam;
         return matchesSearch && matchesTab;
     });
@@ -2826,6 +2851,16 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
     }, [authToken]);
 
     const handleOpenCourseItem = useCallback((sectionKey: string, item: any) => {
+        const contentName = getItemTitle(item, sectionKey === 'note'
+            ? 'Note Bank'
+            : sectionKey === 'question'
+                ? 'Question Bank'
+                : sectionKey === 'video'
+                    ? 'Video Bank'
+                    : sectionKey === 'document'
+                        ? 'Document'
+                        : 'Content');
+
         if (paymentHistoryLoading) {
             Toast.show({ type: 'info', text1: 'Verifying payment status, please wait...' });
             return;
@@ -2837,7 +2872,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         }
 
         if (!detailScreen?.isEnrolled) {
-            Toast.show({ type: 'error', text1: 'Please enroll in this course to access study materials' });
+            showCategoryExamContentLockedToast(contentName);
             return;
         }
 
@@ -2860,7 +2895,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
             handleOpenDocumentFolder(item);
             return;
         }
-    }, [activePaymentSession?.resourceId, enrolledBundleIds, handleOpenNoteBank, handleOpenQuestionBank, handleOpenVideoBank, handleOpenDocumentFolder, paymentHistoryLoading, detailScreen?.isEnrolled]);
+    }, [activePaymentSession?.resourceId, enrolledBundleIds, handleOpenNoteBank, handleOpenQuestionBank, handleOpenVideoBank, handleOpenDocumentFolder, paymentHistoryLoading, detailScreen?.isEnrolled, showCategoryExamContentLockedToast]);
 
     const renderMockSetCards = () => {
         if (!showingSubBundle && subBundleItems.length > 0) {
@@ -3225,6 +3260,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         const normalizedBundle = getBundlePayload(bundle);
         const bundleId = getBundleId(normalizedBundle);
         const resolvedBundleId = bundleId ? String(bundleId) : null;
+        const bundleTitle = String(getItemTitle(normalizedBundle, 'This content')).trim();
 
         if (!resolvedBundleId) {
             return;
@@ -3237,6 +3273,11 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
         if (activePaymentSession?.resourceId === resolvedBundleId && !enrolledBundleIds.includes(resolvedBundleId)) {
             setIsPaymentWebViewVisible(true);
+            return;
+        }
+
+        if (mainTab === 'exam' && !canUseCategoryExam) {
+            showCategoryExamContentLockedToast(bundleTitle);
             return;
         }
 
@@ -4119,13 +4160,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                     <View style={styles.segmentedControl}>
                         <Pressable
                             style={styles.segmentButtonWrap}
-                            onPress={() => {
-                                if (!canUseCategoryExam) {
-                                    showCategoryExamInfo();
-                                    return;
-                                }
-                                setMainTab('exam');
-                            }}
+                            onPress={() => setMainTab('exam')}
                         >
                             <LinearGradient
                                 colors={mainTab === 'exam' ? SEGMENT_THEMES[0].colors as [string, string] : ['#F8FAFC', '#FFFFFF']}
@@ -4185,8 +4220,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                 const lowerTitle = bTitle.toLowerCase();
                                 const category = String(bundle?.category || '').toLowerCase();
                                 const isEliteMock = isEliteMockBundle(bundle);
+                                const isFreeMock = isFreeMockBundle(bundle);
 
-                                const isExam = isEliteMock || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase()));
+                                const isExam = !isFreeMock && (isEliteMock || (apiCategories.length > 0 ? apiCategories : EXAM_CHIPS).some(chip => lowerTitle.includes(chip.toLowerCase()) || category.includes(chip.toLowerCase())));
 
                                 if (mainTab === 'exam') {
                                     const lowerSearch = title.toLowerCase();

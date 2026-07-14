@@ -1,4 +1,21 @@
+export const FREE_MOCK_BUNDLE_NAME = 'Free Mock Bundle';
+
 export const NURSING_SUBJECTS = [
+    {
+        name: FREE_MOCK_BUNDLE_NAME,
+        topics: [
+            "Mock 1",
+            "Mock 2",
+            "Mock 3",
+            "Mock 4",
+            "Mock 5",
+            "Mock 6",
+            "Mock 7",
+            "Mock 8",
+            "Mock 9",
+            "Mock 10",
+        ]
+    },
     {
         name: "Anatomy & Physiology",
         topics: [

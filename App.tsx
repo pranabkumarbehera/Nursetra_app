@@ -13,11 +13,13 @@ import Toast from 'react-native-toast-message';
 
 import store from './src/Redux/Store';
 import { RootNavigator } from './src/Navigation';
+import { AppUpdatePrompt } from './src/Components/AppUpdatePrompt';
 
 function App() {
   return (
     <Provider store={store}>
       <SafeAreaProvider>
+        <AppUpdatePrompt />
         <RootNavigator />
       </SafeAreaProvider>
       <Toast />

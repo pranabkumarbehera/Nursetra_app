@@ -54,6 +54,7 @@ export const MOCK_CHALLENGES = [
 ];
 
 export const QUICK_ACTIONS = [
+  { id: '7', title: 'Free Mock Bundle', icon: 'layers', route: 'CourseScreen' },
   { id: '1', title: 'Rapid Revision', icon: 'flash', route: 'RapidRevisionScreen' },
   { id: '2', title: 'Question Bank', icon: 'book', route: 'QuestionBankScreen' },
   { id: '3', title: 'Subject Tests', icon: 'flask', route: 'SubjectTestsScreen' },
