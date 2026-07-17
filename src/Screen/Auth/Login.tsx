@@ -74,19 +74,36 @@ export const LoginScreen = () => {
   const passwordError = touched.password ? validatePassword(password) : '';
   const isInvalid = !!validateEmail(email) || !!validatePassword(password);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setTouched({ email: true, password: true });
     const nextEmailError = validateEmail(email);
     const nextPasswordError = validatePassword(password);
     if (nextEmailError || nextPasswordError) return;
+
+    const deviceName = Platform.OS === 'ios' ? 'iOS Device' : 'Android Device';
+    let deviceId = Platform.OS === 'ios' ? 'ios-device' : 'android-device';
+    try {
+      let id = await AsyncStorage.getItem('device_id');
+      if (!id) {
+        id = 'xxxx-xxxx-4xxx-yxxx-xxxx'.replace(/[xy]/g, (c) => {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+        await AsyncStorage.setItem('device_id', id);
+      }
+      deviceId = id;
+    } catch {
+      // Ignore
+    }
 
     dispatch(
       loginRequest({
         email: email.trim(),
         password,
         rememberMe,
-        deviceId: Platform.OS === 'ios' ? 'ios-device' : 'android-device',
-        deviceName: Platform.OS === 'ios' ? 'iOS Device' : 'Android Device',
+        deviceId,
+        deviceName,
         deviceType: 'mobile',
       })
     );

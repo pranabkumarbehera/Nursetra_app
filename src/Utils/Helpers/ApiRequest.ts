@@ -1,91 +1,269 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
+import { AppState } from 'react-native';
+import Toast from 'react-native-toast-message';
 import constants from './constants';
 import Store from '../../Redux/Store';
 import { logoutSuccess, tokenSuccess } from '../../Redux/Reducers/AuthReducer';
-import { clearProfile } from '../../Redux/Reducers/ProfileReducer';
-import { clearHomeData } from '../../Redux/Reducers/HomeReducer';
-import { clearBundleFlowState, clearMockTestData, clearPaymentSession } from '../../Redux/Reducers/MockTestReducer';
-import { reset as resetNavigation } from '../../Navigation/NavigationService';
-import { ROUTES } from '../../Navigation/RouteNames';
-import Toast from 'react-native-toast-message';
 
 const normalizeUrl = (url: string) => url.replace(/^\/+/, '');
-const isAuthEndpoint = (url: string) => {
-    const requestUrl = normalizeUrl(url).toLowerCase();
-
-    return [
-        'login',
-        'register',
-        'forgot-password',
-        'verify-otp',
-        'reset-password',
-        'auth/logout',
-        'auth/refresh',
-    ].some(path => requestUrl.includes(path));
-};
 
 const axiosInstance = axios.create({
     baseURL: constants.BASE_URL,
 });
 
-let isLoggingOut = false;
+let refreshPromise: Promise<string | null> | null = null;
+let hasShownSessionExpiredMessage = false;
+let appStateListenerAttached = false;
+let sessionBootstrapStarted = false;
+let lastForegroundRefreshAt = 0;
 
-const performAutoLogout = async () => {
-    if (isLoggingOut) {
+const TOKEN_REFRESH_WINDOW_MS = 2 * 60 * 1000;
+const APP_STATE_STORAGE_KEY = 'APP_SESSION_STATE';
+const APP_LAST_BACKGROUND_AT_KEY = 'APP_LAST_BACKGROUND_AT';
+
+const getAccessToken = (response: any) =>
+    response?.data?.accessToken ||
+    response?.data?.data?.accessToken ||
+    response?.data?.token ||
+    response?.data?.data?.token ||
+    null;
+
+const getRefreshToken = (response: any) =>
+    response?.data?.refreshToken ||
+    response?.data?.refresh_token ||
+    response?.data?.data?.refreshToken ||
+    response?.data?.data?.refresh_token ||
+    response?.data?.tokens?.refreshToken ||
+    response?.data?.tokens?.refresh_token ||
+    response?.data?.data?.tokens?.refreshToken ||
+    response?.data?.data?.tokens?.refresh_token ||
+    null;
+
+const stripBearer = (token: string) => token.replace(/^Bearer\s+/i, '').trim();
+
+const decodeBase64Url = (value: string) => {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    const runtimeGlobal = globalThis as any;
+
+    try {
+        if (typeof runtimeGlobal.atob === 'function') {
+            return runtimeGlobal.atob(padded);
+        }
+    } catch {
+        // Ignore
+    }
+
+    try {
+        if (runtimeGlobal.Buffer?.from) {
+            return runtimeGlobal.Buffer.from(padded, 'base64').toString('utf8');
+        }
+    } catch {
+        return null;
+    }
+
+    return null;
+};
+
+const getTokenExpiryMs = (token?: string | null) => {
+    if (!token) {
+        return null;
+    }
+
+    const parts = stripBearer(token).split('.');
+    if (parts.length < 2) {
+        return null;
+    }
+
+    const payload = decodeBase64Url(parts[1]);
+    if (!payload) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(payload);
+        const exp = Number(parsed?.exp);
+        if (!Number.isFinite(exp) || exp <= 0) {
+            return null;
+        }
+        return exp * 1000;
+    } catch {
+        return null;
+    }
+};
+
+const shouldRefreshTokenSoon = (token?: string | null) => {
+    const expiryMs = getTokenExpiryMs(token);
+    if (!expiryMs) {
+        return false;
+    }
+
+    return expiryMs - Date.now() <= TOKEN_REFRESH_WINDOW_MS;
+};
+
+const clearSessionData = async () => {
+    await AsyncStorage.removeItem(constants.TOKEN);
+    await AsyncStorage.removeItem(constants.REFRESH_TOKEN);
+    await AsyncStorage.removeItem(constants.USER_DATA);
+    await AsyncStorage.removeItem(APP_STATE_STORAGE_KEY);
+    await AsyncStorage.removeItem(APP_LAST_BACKGROUND_AT_KEY);
+    Store.dispatch(logoutSuccess('Session expired'));
+    Store.dispatch({ type: 'Profile/clearProfile' });
+    Store.dispatch({ type: 'MockTest/clearMockTestData' });
+    Store.dispatch({ type: 'Home/clearHomeData' });
+};
+
+const notifySessionExpiredOnce = (message?: string) => {
+    if (hasShownSessionExpiredMessage) {
         return;
     }
 
-    isLoggingOut = true;
+    hasShownSessionExpiredMessage = true;
+    Toast.show({
+        type: 'error',
+        text1: message || 'Session expired. Please login again.',
+    });
+};
 
-    // Immediately remove token from Redux to prevent concurrent logout triggers
-    Store.dispatch(tokenSuccess(null));
+const refreshAccessToken = async () => {
+    if (!refreshPromise) {
+        refreshPromise = (async () => {
+            const storedRefreshToken = await AsyncStorage.getItem(constants.REFRESH_TOKEN);
+            if (!storedRefreshToken) {
+                return null;
+            }
 
-    try {
-        await (AsyncStorage as any).multiRemove([
-            constants.TOKEN,
-            constants.REFRESH_TOKEN,
-            constants.USER_DATA,
-            constants.SAVED_EMAIL,
-            constants.SAVED_PASSWORD,
-        ]);
-        await AsyncStorage.setItem(constants.REMEMBER_PASSWORD, 'false');
-    } catch {
-        // Ignore storage cleanup errors during logout.
+            try {
+                const response = await axios.post(`${constants.BASE_URL}/auth/refresh`, {
+                    refreshToken: storedRefreshToken,
+                }, {
+                    headers: { 'X-Client-Type': 'mobile' }
+                });
+
+                const nextAccessToken = getAccessToken(response);
+                const nextRefreshToken = getRefreshToken(response);
+
+                if (!nextAccessToken) {
+                    return null;
+                }
+
+                await AsyncStorage.setItem(constants.TOKEN, nextAccessToken);
+                Store.dispatch(tokenSuccess(nextAccessToken));
+                if (nextRefreshToken) {
+                    await AsyncStorage.setItem(constants.REFRESH_TOKEN, nextRefreshToken);
+                }
+                hasShownSessionExpiredMessage = false;
+
+                return nextAccessToken;
+            } catch (err: any) {
+                throw err;
+            }
+        })().finally(() => {
+            refreshPromise = null;
+        });
     }
 
-    Store.dispatch(logoutSuccess('logout'));
-    Store.dispatch(clearProfile());
-    Store.dispatch(clearHomeData());
-    Store.dispatch(clearPaymentSession());
-    Store.dispatch(clearBundleFlowState());
-    Store.dispatch(clearMockTestData());
-    Toast.show({ type: 'error', text1: 'Session expired. Please login again.' });
-    resetNavigation({
-        index: 0,
-        routes: [
-            {
-                name: ROUTES.AUTH_STACK,
-                state: {
-                    index: 0,
-                    routes: [{ name: ROUTES.LOGIN }],
-                },
-            },
-        ],
-    });
-    
-    setTimeout(() => {
-        isLoggingOut = false;
-    }, 1000);
+    return refreshPromise;
 };
+
+const warmUpSessionIfNeeded = async () => {
+    const currentToken = await AsyncStorage.getItem(constants.TOKEN);
+    if (!currentToken || !shouldRefreshTokenSoon(currentToken)) {
+        return currentToken;
+    }
+
+    try {
+        return await refreshAccessToken();
+    } catch {
+        return null;
+    }
+};
+
+const storeAppStateSnapshot = async (nextState: string) => {
+    await AsyncStorage.setItem(APP_STATE_STORAGE_KEY, nextState);
+    if (nextState !== 'active') {
+        await AsyncStorage.setItem(APP_LAST_BACKGROUND_AT_KEY, String(Date.now()));
+    }
+};
+
+const bootstrapSessionOnLaunch = async () => {
+    if (sessionBootstrapStarted) {
+        return;
+    }
+    sessionBootstrapStarted = true;
+
+    const currentToken = await AsyncStorage.getItem(constants.TOKEN);
+    if (!currentToken) {
+        return;
+    }
+
+    await warmUpSessionIfNeeded();
+    await storeAppStateSnapshot('active');
+};
+
+if (!appStateListenerAttached) {
+    appStateListenerAttached = true;
+    AppState.addEventListener('change', (nextState) => {
+        void storeAppStateSnapshot(nextState).catch(() => {
+            // Ignore state persistence failures.
+        });
+
+        if (nextState !== 'active') {
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastForegroundRefreshAt < 15000) {
+            return;
+        }
+
+        lastForegroundRefreshAt = now;
+        warmUpSessionIfNeeded().catch(() => {
+            // Ignore background warm-up failures; request-time handling will still run.
+        });
+    });
+
+    void bootstrapSessionOnLaunch().catch(() => {
+        // Ignore launch warm-up failures; request-time handling will still run.
+    });
+}
 
 axiosInstance.interceptors.request.use(
     async (config) => {
         try {
+            const netState = await NetInfo.fetch();
+            if (!netState.isConnected) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'No Internet Connection',
+                    text2: 'Please check your network settings.'
+                });
+                return Promise.reject(new Error('No Internet Connection'));
+            }
+
             if (!config.headers) config.headers = {} as any;
-            const token = await AsyncStorage.getItem(constants.TOKEN);
-            const requestUrl = String(config.url || '');
-            if (token && !isAuthEndpoint(requestUrl)) {
+            config.headers['X-Client-Type'] = 'mobile';
+            const normalizedUrl = String(config.url || '');
+            const isAuthRoute =
+                normalizedUrl.includes('auth/login') ||
+                normalizedUrl.includes('auth/student/login') ||
+                normalizedUrl.includes('auth/refresh') ||
+                normalizedUrl.includes('auth/logout') ||
+                normalizedUrl.includes('auth/forgot-password') ||
+                normalizedUrl.includes('auth/verify-otp') ||
+                normalizedUrl.includes('auth/reset-password');
+
+            let token = await AsyncStorage.getItem(constants.TOKEN);
+            if (token && !isAuthRoute && shouldRefreshTokenSoon(token)) {
+                const refreshedToken = await refreshAccessToken();
+                if (refreshedToken) {
+                    token = refreshedToken;
+                }
+            }
+
+            if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
         } catch {
@@ -96,18 +274,45 @@ axiosInstance.interceptors.request.use(
     (error) => Promise.reject(error),
 );
 
-// Response Interceptor for Token Handling
+// Response Interceptor for Refresh Token Handling
 axiosInstance.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        hasShownSessionExpiredMessage = false;
+        return response;
+    },
     async (error) => {
-        const statusCode = error.response?.status;
-        const message = error.response?.data?.message?.toLowerCase() || '';
-        const requestUrl = String(error.config?.url || '');
-        const isAuthRequest = isAuthEndpoint(requestUrl);
+        const originalRequest = error.config || {};
+        const isRefreshRequest = String(originalRequest.url || '').includes('auth/refresh');
+        const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
 
-        if (!isAuthRequest && (statusCode === 401 || statusCode === 403 || message.includes('invalid') || message.includes('unauthorized') || message.includes('expired'))) {
-            await performAutoLogout();
-            return Promise.reject(error);
+        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest) {
+            originalRequest._retry = true;
+            try {
+                const newAccessToken = await refreshAccessToken();
+                if (newAccessToken) {
+                    if (!originalRequest.headers) {
+                        originalRequest.headers = {};
+                    }
+                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                    return axiosInstance(originalRequest);
+                }
+
+                await clearSessionData();
+                notifySessionExpiredOnce(typeof serverMessage === 'string' ? serverMessage : undefined);
+                return Promise.reject(error);
+            } catch (refreshError: any) {
+                const status = refreshError?.response?.status;
+                if (status === 401 || status === 403) {
+                    await clearSessionData();
+                    notifySessionExpiredOnce(refreshError?.response?.data?.message);
+                }
+                return Promise.reject(refreshError);
+            }
+        }
+
+        if (error.response?.status === 401 && isRefreshRequest) {
+            await clearSessionData();
+            notifySessionExpiredOnce(typeof serverMessage === 'string' ? serverMessage : undefined);
         }
 
         return Promise.reject(error);
