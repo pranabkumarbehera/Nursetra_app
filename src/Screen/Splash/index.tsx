@@ -13,7 +13,7 @@ import { clearMockTestData, clearBundleFlowState, clearPaymentSession } from '..
 import { getApi } from '../../Utils/Helpers/ApiRequest';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const EXAM_CHIPS = ['NORCET', 'GNM', 'B.Sc Nursing', 'CHO', 'ESIC', 'RRB'];
+const EXAM_CHIPS = ['NORCET', 'ESIC', 'RRB', 'DSSSB', 'PGIMER', 'JIPMER', 'AFMS', 'CHO'];
 
 const BG_ICONS = [
   { id: '1', name: 'stethoscope', top: '15%', left: '10%', size: 42, rotate: '-15deg' },
@@ -24,6 +24,65 @@ const BG_ICONS = [
   { id: '6', name: 'stethoscope', bottom: '15%', right: '60%', size: 26, rotate: '0deg' },
 ];
 
+const DotPattern = ({ position, anim, color }: { position: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight', anim: Animated.Value, color: string }) => {
+  const cornerScale = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.95, 1.05],
+  });
+
+  const getPositionStyle = () => {
+    switch (position) {
+      case 'topLeft': return { top: 10, left: 10 };
+      case 'topRight': return { top: 10, right: 10 };
+      case 'bottomLeft': return { bottom: 10, left: 10 };
+      case 'bottomRight': return { bottom: 10, right: 10 };
+      default: return {};
+    }
+  };
+
+  return (
+    <Animated.View
+      style={[
+        {
+          position: 'absolute',
+          width: 120,
+          height: 120,
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          zIndex: 1,
+        },
+        getPositionStyle(),
+        { transform: [{ scale: cornerScale }] }
+      ]}
+    >
+      {Array.from({ length: 100 }).map((_, i) => {
+        const row = Math.floor(i / 10);
+        const col = i % 10;
+
+        let distance;
+        if (position === 'topRight') {
+          distance = row + (9 - col);
+        } else if (position === 'bottomLeft') {
+          distance = (9 - row) + col;
+        } else if (position === 'topLeft') {
+          distance = row + col;
+        } else {
+          distance = (9 - row) + (9 - col);
+        }
+
+        const opacity = Math.max(0.05, 0.7 - (distance * 0.06));
+        const size = Math.max(1.5, 6 - (distance * 0.35));
+
+        return (
+          <View key={i} style={{ width: 12, height: 12, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity }} />
+          </View>
+        );
+      })}
+    </Animated.View>
+  );
+};
+
 export const SplashScreen = () => {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
@@ -33,10 +92,12 @@ export const SplashScreen = () => {
   const scaleAnim = React.useRef(new Animated.Value(0.5)).current;
   const slideAnim = React.useRef(new Animated.Value(50)).current;
   const circleAnim = React.useRef(new Animated.Value(1)).current;
+  const cornerAnim = React.useRef(new Animated.Value(0)).current;
   const taglineAnim = React.useRef(new Animated.Value(0)).current;
   const colorAnim = React.useRef(new Animated.Value(0)).current;
   const chipAnims = React.useRef(EXAM_CHIPS.map(() => new Animated.Value(0))).current;
   const iconAnims = React.useRef(BG_ICONS.map(() => new Animated.Value(0))).current;
+  const textAnims = React.useRef([new Animated.Value(0), new Animated.Value(0), new Animated.Value(0)]).current;
 
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
@@ -47,6 +108,21 @@ export const SplashScreen = () => {
       Animated.sequence([
         Animated.timing(circleAnim, { toValue: 1.15, duration: 2000, useNativeDriver: true }),
         Animated.timing(circleAnim, { toValue: 1, duration: 2000, useNativeDriver: true })
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(cornerAnim, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cornerAnim, {
+          toValue: 0,
+          duration: 1800,
+          useNativeDriver: true,
+        }),
       ])
     ).start();
 
@@ -99,77 +175,82 @@ export const SplashScreen = () => {
         Animated.spring(anim, { toValue: 1, friction: 5, tension: 40, useNativeDriver: true })
       )).start();
 
-      // 3. Animate the tagline appearing
+      // 3. Animate the tagline container appearing
       Animated.spring(taglineAnim, {
         toValue: 1,
         friction: 6,
         tension: 50,
         useNativeDriver: true,
       }).start(() => {
-        // 4. Stagger animate the course chips
-        Animated.stagger(150, chipAnims.map(anim =>
-          Animated.spring(anim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true })
+        // Animate the three words sequentially
+        Animated.stagger(200, textAnims.map(anim =>
+          Animated.timing(anim, { toValue: 1, duration: 400, useNativeDriver: true })
         )).start(() => {
-          // 5. Start the loading progress bar AFTER chips
-        Animated.timing(progress, {
-          toValue: 100,
-          duration: 1200,
-          useNativeDriver: false,
-        }).start(() => {
-            // Verify the stored token before opening the main app.
-            timeout = setTimeout(async () => {
-              if (!isActive) {
-                return;
-              }
-
-              const token = await AsyncStorage.getItem(constants.TOKEN);
-              if (token) {
-                try {
-                  const response = await getApi('auth/me', { authorization: token });
-                  if (!isActive) {
-                    return;
-                  }
-
-                  if (response?.data?.success === true || response?.status === 200) {
-                    dispatch(tokenSuccess(token));
-                    navigation.replace(ROUTES.MAIN_STACK);
-                    return;
-                  }
-                } catch {
-                  if (!isActive) {
-                    return;
-                  }
-                  // Let the global API interceptor handle expired sessions when possible.
-                }
-
-                await (AsyncStorage as any).multiRemove([
-                  constants.TOKEN,
-                  constants.REFRESH_TOKEN,
-                  constants.USER_DATA,
-                  constants.SAVED_EMAIL,
-                  constants.SAVED_PASSWORD,
-                ]);
-                await AsyncStorage.setItem(constants.REMEMBER_PASSWORD, 'false');
-                dispatch(tokenSuccess(null));
-                dispatch(clearProfile());
-                dispatch(clearHomeData());
-                dispatch(clearMockTestData());
-                dispatch(clearBundleFlowState());
-                dispatch(clearPaymentSession());
-
+          // 4. Stagger animate the course chips
+          Animated.stagger(150, chipAnims.map(anim =>
+            Animated.spring(anim, { toValue: 1, friction: 6, tension: 50, useNativeDriver: true })
+          )).start(() => {
+            // 5. Start the loading progress bar AFTER chips
+            Animated.timing(progress, {
+              toValue: 100,
+              duration: 1200,
+              useNativeDriver: false,
+            }).start(() => {
+              // Verify the stored token before opening the main app.
+              timeout = setTimeout(async () => {
                 if (!isActive) {
                   return;
                 }
 
-                const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-                navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
-              } else {
-                const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-                if (isActive) {
+                const token = await AsyncStorage.getItem(constants.TOKEN);
+                if (token) {
+                  try {
+                    const response = await getApi('auth/me', { authorization: token });
+                    if (!isActive) {
+                      return;
+                    }
+
+                    if (response?.data?.success === true || response?.status === 200) {
+                      dispatch(tokenSuccess(token));
+                      navigation.replace(ROUTES.MAIN_STACK);
+                      return;
+                    }
+                  } catch {
+                    if (!isActive) {
+                      return;
+                    }
+                    // Let the global API interceptor handle expired sessions when possible.
+                  }
+
+                  await (AsyncStorage as any).multiRemove([
+                    constants.TOKEN,
+                    constants.REFRESH_TOKEN,
+                    constants.USER_DATA,
+                    constants.SAVED_EMAIL,
+                    constants.SAVED_PASSWORD,
+                  ]);
+                  await AsyncStorage.setItem(constants.REMEMBER_PASSWORD, 'false');
+                  dispatch(tokenSuccess(null));
+                  dispatch(clearProfile());
+                  dispatch(clearHomeData());
+                  dispatch(clearMockTestData());
+                  dispatch(clearBundleFlowState());
+                  dispatch(clearPaymentSession());
+
+                  if (!isActive) {
+                    return;
+                  }
+
+                  const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
                   navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
+                } else {
+                  const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+                  if (isActive) {
+                    navigation.replace(hasSeenOnboarding === 'true' ? ROUTES.LOGIN : ROUTES.ONBOARDING);
+                  }
                 }
-              }
-            }, 800);
+              }, 800);
+            });
           });
         });
       });
@@ -198,10 +279,22 @@ export const SplashScreen = () => {
     outputRange: [theme.colors.primary, theme.colors.primary, theme.colors.secondary],
   });
 
+  const cornerScale = cornerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.92, 1.06],
+  });
+
+  const cornerOpacity = cornerAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.45, 0.9],
+  });
+
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.glowCircle, styles.glowTop, { transform: [{ scale: circleAnim }] }]} />
-      <Animated.View style={[styles.glowCircle, styles.glowBottom, { transform: [{ scale: circleAnim }] }]} />
+      <DotPattern position="topLeft" anim={cornerAnim} color="#E83D8E" />
+      <DotPattern position="topRight" anim={cornerAnim} color="#0A4B8F" />
+      <DotPattern position="bottomLeft" anim={cornerAnim} color="#10B981" />
+      <DotPattern position="bottomRight" anim={cornerAnim} color="#F59E0B" />
 
       {BG_ICONS.map((icon, index) => (
         <Animated.View
@@ -218,22 +311,17 @@ export const SplashScreen = () => {
 
       <Animated.View style={[styles.centerContent, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
         <View style={styles.logoWrap}>
-          {/* Base: Original Logo (Shows first) */}
-          <Image source={Imagepath.Logo} style={styles.logo} resizeMode="contain" />
-          
-          {/* Overlay: Tinted Logo (Fades in over time) */}
-          <Animated.Image 
-            source={Imagepath.Logo} 
-            style={[styles.logo, { opacity: overlayOpacity, tintColor: overlayColor }]} 
-            resizeMode="contain" 
-          />
+          <Image source={Imagepath.SpalshLogo} style={styles.logo} resizeMode="contain" />
         </View>
-        <Text style={styles.appName}>Nursetra</Text>
         <Animated.View style={[styles.promoCard, { opacity: taglineAnim, transform: [{ scale: taglineAnim }] }]}>
-          <Text style={styles.promoTitle}>One-Time Purchase • Lifetime Access</Text>
-          <Text style={styles.promoSubtitle}>
+          <View style={{ flexDirection: 'row' }}>
+            <Animated.Text style={{ color: '#0084FF', fontWeight: "bold", fontFamily: Fonts.interbold, fontSize: 16, opacity: textAnims[0], transform: [{ translateY: textAnims[0].interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>Learn. </Animated.Text>
+            <Animated.Text style={{ color: '#111827', fontWeight: "bold", fontFamily: Fonts.interbold, fontSize: 16, opacity: textAnims[1], transform: [{ translateY: textAnims[1].interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>Succeed. </Animated.Text>
+            <Animated.Text style={{ color: '#0084FF', fontWeight: "bold", fontFamily: Fonts.interbold, fontSize: 16, opacity: textAnims[2], transform: [{ translateY: textAnims[2].interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) }] }}>Get Hired.</Animated.Text>
+          </View>
+          {/* <Text style={styles.promoSubtitle}>
             Purchase any course once and enjoy unlimited premium access forever. No renewals. No expiry.
-          </Text>
+          </Text> */}
         </Animated.View>
       </Animated.View>
 
@@ -263,23 +351,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     overflow: 'hidden',
   },
-  glowCircle: {
-    position: 'absolute',
-    borderRadius: 999,
-    backgroundColor: 'rgba(10, 75, 143, 0.05)',
-  },
-  glowTop: {
-    width: 260,
-    height: 260,
-    top: -60,
-    left: -80,
-  },
-  glowBottom: {
-    width: 240,
-    height: 240,
-    bottom: -80,
-    right: -60,
-  },
   centerContent: {
     flex: 1,
     alignItems: 'center',
@@ -292,15 +363,15 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
   logoWrap: {
-    width: 350,
-    height: 350,
-    marginBottom: 24,
-    position: 'relative',
+    width: 220,
+    height: 220,
+    marginBottom: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: {
-    position: 'absolute',
-    width: 350,
-    height: 350,
+    width: 220,
+    height: 220,
   },
   appName: {
     ...theme.typography.h1,
@@ -310,13 +381,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   promoCard: {
-    marginTop: 6,
+    // marginTop: 6,
     paddingHorizontal: 18,
-    paddingVertical: 14,
+    // paddingVertical: 14,
     borderRadius: 18,
-    backgroundColor: 'rgba(11, 95, 168, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(11, 95, 168, 0.14)',
+    // backgroundColor: 'rgba(11, 95, 168, 0.08)',
+    // borderWidth: 1,
+    // borderColor: 'rgba(11, 95, 168, 0.14)',
     alignItems: 'center',
   },
   promoTitle: {

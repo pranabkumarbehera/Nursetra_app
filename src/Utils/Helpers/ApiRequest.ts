@@ -5,7 +5,7 @@ import { AppState } from 'react-native';
 import Toast from 'react-native-toast-message';
 import constants from './constants';
 import Store from '../../Redux/Store';
-import { logoutSuccess, tokenSuccess } from '../../Redux/Reducers/AuthReducer';
+import { tokenSuccess } from '../../Redux/Reducers/AuthReducer';
 
 const normalizeUrl = (url: string) => url.replace(/^\/+/, '');
 
@@ -14,10 +14,10 @@ const axiosInstance = axios.create({
 });
 
 let refreshPromise: Promise<string | null> | null = null;
-let hasShownSessionExpiredMessage = false;
 let appStateListenerAttached = false;
 let sessionBootstrapStarted = false;
 let lastForegroundRefreshAt = 0;
+let refreshTokenInvalid = false;
 
 const TOKEN_REFRESH_WINDOW_MS = 2 * 60 * 1000;
 const APP_STATE_STORAGE_KEY = 'APP_SESSION_STATE';
@@ -103,31 +103,11 @@ const shouldRefreshTokenSoon = (token?: string | null) => {
     return expiryMs - Date.now() <= TOKEN_REFRESH_WINDOW_MS;
 };
 
-const clearSessionData = async () => {
-    await AsyncStorage.removeItem(constants.TOKEN);
-    await AsyncStorage.removeItem(constants.REFRESH_TOKEN);
-    await AsyncStorage.removeItem(constants.USER_DATA);
-    await AsyncStorage.removeItem(APP_STATE_STORAGE_KEY);
-    await AsyncStorage.removeItem(APP_LAST_BACKGROUND_AT_KEY);
-    Store.dispatch(logoutSuccess('Session expired'));
-    Store.dispatch({ type: 'Profile/clearProfile' });
-    Store.dispatch({ type: 'MockTest/clearMockTestData' });
-    Store.dispatch({ type: 'Home/clearHomeData' });
-};
-
-const notifySessionExpiredOnce = (message?: string) => {
-    if (hasShownSessionExpiredMessage) {
-        return;
+const refreshAccessToken = async () => {
+    if (refreshTokenInvalid) {
+        return null;
     }
 
-    hasShownSessionExpiredMessage = true;
-    Toast.show({
-        type: 'error',
-        text1: message || 'Session expired. Please login again.',
-    });
-};
-
-const refreshAccessToken = async () => {
     if (!refreshPromise) {
         refreshPromise = (async () => {
             const storedRefreshToken = await AsyncStorage.getItem(constants.REFRESH_TOKEN);
@@ -154,10 +134,13 @@ const refreshAccessToken = async () => {
                 if (nextRefreshToken) {
                     await AsyncStorage.setItem(constants.REFRESH_TOKEN, nextRefreshToken);
                 }
-                hasShownSessionExpiredMessage = false;
-
+                refreshTokenInvalid = false;
                 return nextAccessToken;
             } catch (err: any) {
+                const status = err?.response?.status;
+                if (status === 401 || status === 403) {
+                    refreshTokenInvalid = true;
+                }
                 throw err;
             }
         })().finally(() => {
@@ -169,6 +152,10 @@ const refreshAccessToken = async () => {
 };
 
 const warmUpSessionIfNeeded = async () => {
+    if (refreshTokenInvalid) {
+        return AsyncStorage.getItem(constants.TOKEN);
+    }
+
     const currentToken = await AsyncStorage.getItem(constants.TOKEN);
     if (!currentToken || !shouldRefreshTokenSoon(currentToken)) {
         return currentToken;
@@ -256,7 +243,7 @@ axiosInstance.interceptors.request.use(
                 normalizedUrl.includes('auth/reset-password');
 
             let token = await AsyncStorage.getItem(constants.TOKEN);
-            if (token && !isAuthRoute && shouldRefreshTokenSoon(token)) {
+            if (token && !isAuthRoute && !refreshTokenInvalid && shouldRefreshTokenSoon(token)) {
                 const refreshedToken = await refreshAccessToken();
                 if (refreshedToken) {
                     token = refreshedToken;
@@ -277,13 +264,11 @@ axiosInstance.interceptors.request.use(
 // Response Interceptor for Refresh Token Handling
 axiosInstance.interceptors.response.use(
     (response) => {
-        hasShownSessionExpiredMessage = false;
         return response;
     },
     async (error) => {
         const originalRequest = error.config || {};
         const isRefreshRequest = String(originalRequest.url || '').includes('auth/refresh');
-        const serverMessage = error?.response?.data?.message || error?.response?.data?.error;
 
         if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest) {
             originalRequest._retry = true;
@@ -297,22 +282,15 @@ axiosInstance.interceptors.response.use(
                     return axiosInstance(originalRequest);
                 }
 
-                await clearSessionData();
-                notifySessionExpiredOnce(typeof serverMessage === 'string' ? serverMessage : undefined);
                 return Promise.reject(error);
             } catch (refreshError: any) {
-                const status = refreshError?.response?.status;
-                if (status === 401 || status === 403) {
-                    await clearSessionData();
-                    notifySessionExpiredOnce(refreshError?.response?.data?.message);
-                }
                 return Promise.reject(refreshError);
             }
         }
 
         if (error.response?.status === 401 && isRefreshRequest) {
-            await clearSessionData();
-            notifySessionExpiredOnce(typeof serverMessage === 'string' ? serverMessage : undefined);
+            refreshTokenInvalid = true;
+            return Promise.reject(error);
         }
 
         return Promise.reject(error);
