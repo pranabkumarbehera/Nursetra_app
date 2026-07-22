@@ -60,7 +60,7 @@ export const HomeScreen = () => {
   const avgAccuracy = formatPercent(
     homeState.dashboardData?.avgAccuracy ?? homeState.dashboardData?.averageAccuracy ?? homeState.dashboardData?.average_accuracy ?? homeState.dashboardData?.stats?.avgAccuracy ?? homeState.dashboardData?.summary?.avgAccuracy ?? stats.accuracy
   );
-  const rank = homeState.dashboardData?.rank ?? homeState.dashboardData?.allIndiaRank ?? homeState.dashboardData?.air ?? homeState.dashboardData?.stats?.rank ?? stats.rank ?? '-';
+  const rank = stats.rank || homeState.dashboardData?.rank || homeState.dashboardData?.allIndiaRank || homeState.dashboardData?.air || homeState.dashboardData?.stats?.rank || '-';
   const streak = homeState.dashboardData?.dayStreak ?? homeState.dashboardData?.streak ?? homeState.dashboardData?.stats?.dayStreak ?? homeState.dashboardData?.summary?.dayStreak ?? 0;
   const testsDone = homeState.dashboardData?.testsCompleted ?? homeState.dashboardData?.completedAttempts ?? homeState.dashboardData?.stats?.testsCompleted ?? homeState.dashboardData?.summary?.testsCompleted ?? homeState.dashboardData?.completedTests ?? 0;
 

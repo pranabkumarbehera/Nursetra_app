@@ -15,7 +15,6 @@ import { bootstrapHomeRequest } from '../../Redux/Reducers/HomeReducer';
 
 const HERO_GRADIENT = ['#247ce7', '#0B5FA8', '#14B8A6'];
 const SCORE_GRADIENT = ['#FFFFFF', '#F8FAFC', '#EEF2F7'];
-const HERO_SOFT_GRADIENT = ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)'];
 const SUMMARY_GRADIENT = ['rgba(255,255,255,0.98)', 'rgba(244,249,255,0.98)'];
 const CARD_BLUE_GRADIENT = ['rgba(11,95,168,0.12)', 'rgba(20,184,166,0.07)'];
 const CARD_GOLD_GRADIENT = ['rgba(245,158,11,0.14)', 'rgba(251,191,36,0.08)'];
@@ -56,6 +55,21 @@ const getReviewItems = (resultData: any) => {
         const question = item?.question || item?.questionId || item;
         const rawOptions = question?.options || question?.choices || item?.options || [];
         const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, idx: number) => normalizeOption(opt, idx)) : [];
+        const explanation =
+            item?.explanation ||
+            item?.answerExplanation ||
+            item?.answer_explanation ||
+            item?.solutionExplanation ||
+            item?.solution ||
+            question?.explanation ||
+            question?.answerExplanation ||
+            question?.answer_explanation ||
+            question?.solutionExplanation ||
+            question?.solution ||
+            resultData?.explanation ||
+            resultData?.answerExplanation ||
+            resultData?.answer_explanation ||
+            '';
 
         const selectedRaw = item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.userAnswer ?? item?.studentAnswer ?? item?.answer ?? null;
         const selectedIndex = item?.selectedAnswer?.index ?? item?.selectedIndex ?? item?.userAnswerIndex ?? null;
@@ -85,6 +99,7 @@ const getReviewItems = (resultData: any) => {
             selectedIndex: resolvedSelectedIndex >= 0 ? resolvedSelectedIndex : null,
             correctIndex: resolvedCorrectIndex >= 0 ? resolvedCorrectIndex : null,
             status,
+            explanation,
         };
     });
 };
@@ -144,7 +159,7 @@ export const ResultScreen = () => {
     const displayScore = Number(score).toFixed(2).replace(/\.?0+$/, '');
 
     const title = route.params?.title || resultData?.title || resultData?.quiz?.title || startTestResponse?.title || startTestResponse?.quiz?.title || 'Mock Test';
-    const rank = resultData?.rank ?? resultData?.allIndiaRank ?? resultData?.air ?? '-';
+    const rank = resultData?.rank || resultData?.allIndiaRank || resultData?.air || '-';
 
     if (isLoading && !reviewItems.length) {
         return (
@@ -373,6 +388,13 @@ export const ResultScreen = () => {
                       <Text style={styles.answerLabel}>Answer Key:</Text>
                       <Text style={styles.answerValueCorrect}>{item.correctAnswerLabel || 'Unknown'}</Text>
                     </View>
+
+                    {item.explanation ? (
+                      <View style={styles.explanationBox}>
+                        <Text style={styles.answerLabel}>Explanation:</Text>
+                        <Text style={styles.explanationText}>{item.explanation}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </LinearGradient>
               );
@@ -867,5 +889,18 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.interbold,
     fontSize: 12,
     fontWeight: '700',
+  },
+  explanationBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: REVIEW_BORDER,
+  },
+  explanationText: {
+    marginTop: 6,
+    color: '#334155',
+    fontFamily: Fonts.interregular,
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

@@ -196,6 +196,18 @@ export const getProfileName = (profile: any) =>
     ) || 'Student';
 
 export const normalizeDashboardStats = (dashboard: any) => {
+    const dashboardSources = [
+        dashboard,
+        dashboard?.data,
+        dashboard?.student,
+        dashboard?.user,
+        dashboard?.profile,
+        dashboard?.summary,
+        dashboard?.stats,
+        dashboard?.overview,
+        dashboard?.dashboard,
+    ].filter(Boolean);
+
     const summary = dashboard?.summary || dashboard?.stats || dashboard?.overview || dashboard?.dashboard || dashboard || {};
     const recentAttempts = Array.isArray(summary?.recentAttempts) ? summary.recentAttempts : [];
     const calculatedAverageAccuracy = recentAttempts.length > 0
@@ -211,7 +223,11 @@ export const normalizeDashboardStats = (dashboard: any) => {
         score: firstDefined(summary?.score, summary?.totalScore, summary?.avgScore, summary?.averageScore, summary?.points),
         accuracy: firstDefined(summary?.accuracy, summary?.accuracyPercentage, summary?.avgAccuracy, summary?.averageAccuracy, calculatedAverageAccuracy),
         timeSpent: firstDefined(summary?.timeSpent, summary?.timeSpend, summary?.timeTaken, summary?.studyTime, summary?.totalTimeSpent),
-        rank: firstDefined(summary?.rank, summary?.allIndiaRank, summary?.air),
+        rank: firstDefined(
+            ...dashboardSources.map(source => source?.rank),
+            ...dashboardSources.map(source => source?.allIndiaRank),
+            ...dashboardSources.map(source => source?.air),
+        ),
     };
 };
 
