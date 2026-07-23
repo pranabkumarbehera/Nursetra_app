@@ -2128,6 +2128,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
     const [selectedDocumentFolderTitle, setSelectedDocumentFolderTitle] = useState('');
     const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
     const [subjectBankSkeletonVisible, setSubjectBankSkeletonVisible] = useState(false);
+    const [detailSearchQuery, setDetailSearchQuery] = useState('');
 
     const authToken = useSelector((state: RootState) => state.AuthReducer.token);
     const { paymentHistoryData, paymentHistoryLoading } = useSelector((state: RootState) => state.ProfileReducer);
@@ -2184,7 +2185,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         };
     }, [studentModules, paymentHistoryData]);
     const successfulPaidBundleIds = useMemo(() => {
-        const paymentsList = paymentHistoryData?.data?.items || paymentHistoryData?.items || [];
+        const paymentsList = paymentHistoryData?.data?.items || paymentHistoryData?.items || paymentHistoryData?.data || (Array.isArray(paymentHistoryData) ? paymentHistoryData : []);
         const successStatuses = new Set(['captured', 'success', 'paid', 'completed']);
 
         const paidIds = Array.isArray(paymentsList)
@@ -2208,14 +2209,24 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         return Array.from(new Set(paidIds));
     }, [paymentHistoryData]);
     const purchasedSubjectCount = successfulPaidBundleIds.length;
-    const canUseCategoryExam = purchasedSubjectCount >= MIN_SUBJECTS_FOR_CATEGORY_EXAM;
+    const hasAllSubjectBundlePayment = useMemo(() => {
+        const paymentsList = paymentHistoryData?.data?.items || paymentHistoryData?.items || paymentHistoryData?.data || (Array.isArray(paymentHistoryData) ? paymentHistoryData : []);
+
+        return Array.isArray(paymentsList) && paymentsList.some((item: any) => {
+            const status = String(item?.status || '').trim().toUpperCase();
+            const resourceTitle = String(item?.resourceTitle || '').trim().toLowerCase();
+
+            return status === 'COMPLETED' && resourceTitle === 'all subject bundle';
+        });
+    }, [paymentHistoryData]);
+    const canUseCategoryExam = purchasedSubjectCount >= MIN_SUBJECTS_FOR_CATEGORY_EXAM || hasAllSubjectBundlePayment;
 
     const apiCategories = useMemo(() => {
         let cats: any[] = [];
         if (Array.isArray(bundleList?.categories)) cats = bundleList.categories;
         else if (Array.isArray(bundleList?.data?.categories)) cats = bundleList.data.categories;
         else if (Array.isArray(bundleList?.data?.data?.categories)) cats = bundleList.data.data.categories;
-        
+
         return cats.map(c => String(c?.name || c?.title || '')).filter(Boolean);
     }, [bundleList]);
 
@@ -2553,6 +2564,98 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
         [courseSections.length, mockContentAvailable],
     );
     const detailTabs = availableDetailTabs;
+    const normalizedDetailSearchQuery = normalizeTitle(detailSearchQuery);
+
+    const filteredSubBundleItems = useMemo(() => {
+        if (!normalizedDetailSearchQuery) {
+            return subBundleItems;
+        }
+
+        return subBundleItems.filter((subBundle: any) => {
+            const normalizedSubBundle = getBundlePayload(subBundle);
+            const title = normalizeTitle(String(normalizedSubBundle?.title || normalizedSubBundle?.name || ''));
+            const description = normalizeTitle(String(normalizedSubBundle?.description || normalizedSubBundle?.summary || ''));
+            const mockCount = normalizeTitle(String(getBundleMockCount(normalizedSubBundle)));
+
+            return (
+                title.includes(normalizedDetailSearchQuery) ||
+                description.includes(normalizedDetailSearchQuery) ||
+                mockCount.includes(normalizedDetailSearchQuery)
+            );
+        });
+    }, [normalizedDetailSearchQuery, subBundleItems]);
+
+    const filteredDetailQuizGroups = useMemo(() => {
+        const groups = ensureArray(detailScreen?.quizGroups);
+
+        if (!normalizedDetailSearchQuery) {
+            return groups;
+        }
+
+        return groups.reduce((acc: any[], group: any) => {
+            const groupTitle = normalizeTitle(String(group?.title || ''));
+            const quizzes = ensureArray(group?.quizzes);
+
+            if (groupTitle.includes(normalizedDetailSearchQuery)) {
+                acc.push({ ...group, quizzes });
+                return acc;
+            }
+
+            const filteredQuizzes = quizzes.filter((quiz: any) => {
+                const quizTitle = normalizeTitle(String(quiz?.title || quiz?.name || ''));
+                const quizDescription = normalizeTitle(String(quiz?.description || quiz?.summary || quiz?.topic || ''));
+
+                return (
+                    quizTitle.includes(normalizedDetailSearchQuery) ||
+                    quizDescription.includes(normalizedDetailSearchQuery)
+                );
+            });
+
+            if (filteredQuizzes.length > 0) {
+                acc.push({ ...group, quizzes: filteredQuizzes });
+            }
+
+            return acc;
+        }, []);
+    }, [detailScreen?.quizGroups, normalizedDetailSearchQuery]);
+
+    const filteredCourseSections = useMemo(() => {
+        if (!normalizedDetailSearchQuery) {
+            return courseSections;
+        }
+
+        return courseSections
+            .map((section: any) => {
+                const sectionLabel = normalizeTitle(String(section?.label || ''));
+                const sectionMatches = sectionLabel.includes(normalizedDetailSearchQuery);
+                const items = ensureArray(section?.items);
+
+                if (sectionMatches) {
+                    return section;
+                }
+
+                const filteredItems = items.filter((item: any) => {
+                    const itemTitle = normalizeTitle(String(getItemTitle(item, '')));
+                    const itemDescription = normalizeTitle(String(getItemDescription(item) || ''));
+
+                    return (
+                        itemTitle.includes(normalizedDetailSearchQuery) ||
+                        itemDescription.includes(normalizedDetailSearchQuery)
+                    );
+                });
+
+                return filteredItems.length > 0 ? { ...section, items: filteredItems } : null;
+            })
+            .filter(Boolean);
+    }, [courseSections, normalizedDetailSearchQuery]);
+
+    const filteredActiveCourseSection = useMemo(() => {
+        if (filteredCourseSections.length === 0) {
+            return null;
+        }
+
+        return filteredCourseSections.find(section => section.key === activeCourseSection) || filteredCourseSections[0];
+    }, [activeCourseSection, filteredCourseSections]);
 
     const fetchMockMarkings = useCallback(async () => {
         const quizIds = detailScreen?.quizIds;
@@ -2898,11 +3001,11 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
     }, [activePaymentSession?.resourceId, enrolledBundleIds, handleOpenNoteBank, handleOpenQuestionBank, handleOpenVideoBank, handleOpenDocumentFolder, paymentHistoryLoading, detailScreen?.isEnrolled, showCategoryExamContentLockedToast]);
 
     const renderMockSetCards = () => {
-        if (!showingSubBundle && subBundleItems.length > 0) {
+        if (!showingSubBundle && filteredSubBundleItems.length > 0) {
             return (
                 <View style={styles.subjectList}>
                     <View style={styles.quizCardsWrap}>
-                        {subBundleItems.map((subBundle: any, index: number) => {
+                        {filteredSubBundleItems.map((subBundle: any, index: number) => {
                             const normalizedSubBundle = getBundlePayload(subBundle);
                             const mockCount = getBundleMockCount(normalizedSubBundle);
 
@@ -2937,18 +3040,18 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
             );
         }
 
-        if (detailScreen?.quizGroups?.length > 0) {
+        if (filteredDetailQuizGroups.length > 0) {
             return (
                 <>
                     <Text style={styles.sectionTitle}>Mock Bank</Text>
                     <Text style={styles.subjectSubtitle}>
-                        {detailScreen.quizGroups?.length > 0
-                            ? `${detailScreen.quizIds?.length || 0} quizzes in this ${showingSubBundle ? 'course' : 'category'}`
+                        {filteredDetailQuizGroups.length > 0
+                            ? `${filteredDetailQuizGroups.reduce((total: number, group: any) => total + (group?.quizzes?.length || 0), 0)} quizzes in this ${showingSubBundle ? 'course' : 'category'}`
                             : 'No quizzes returned from the API'}
                     </Text>
 
                     <View style={styles.subjectList}>
-                        {detailScreen.quizGroups?.map((group: any, groupIndex: number) => (
+                        {filteredDetailQuizGroups.map((group: any, groupIndex: number) => (
                             <View key={`${group.title || 'group'}-${groupIndex}`} style={styles.quizSection}>
                                 <View style={styles.topicRow}>
                                     <View style={styles.topicDot} />
@@ -3030,15 +3133,18 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
             );
         }
 
-        return null;
+        return (
+            <View style={styles.emptyStateBox}>
+                <Feather name="search" size={normalize(24)} color="#94A3B8" />
+                <Text style={styles.emptyStateText}>
+                    {normalizedDetailSearchQuery ? 'No matching mock tests found' : 'No Data Available'}
+                </Text>
+            </View>
+        );
     };
 
     const renderCourseSectionItem = useCallback(({ item }: { item: any }) => {
-        if (!activeCourseSection) {
-            return null;
-        }
-
-        const section = courseSections.find(current => current.key === activeCourseSection);
+        const section = filteredActiveCourseSection || courseSections.find(current => current.key === activeCourseSection);
         if (!section) {
             return null;
         }
@@ -3150,19 +3256,21 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                 </LinearGradient>
             </Pressable>
         );
-    }, [activeCourseSection, courseSections, handleOpenCourseItem]);
+    }, [activeCourseSection, courseSections, filteredActiveCourseSection, handleOpenCourseItem]);
 
     const renderCourseTabContent = () => {
-        if (courseSections.length === 0) {
+        if (filteredCourseSections.length === 0) {
             return (
                 <View style={styles.emptyStateBox}>
                     <Feather name="folder" size={normalize(24)} color="#94A3B8" />
-                    <Text style={styles.emptyStateText}>No Data Available</Text>
+                    <Text style={styles.emptyStateText}>
+                        {normalizedDetailSearchQuery ? 'No matching study materials found' : 'No Data Available'}
+                    </Text>
                 </View>
             );
         }
 
-        const activeSection = courseSections.find(section => section.key === activeCourseSection) || courseSections[0];
+        const activeSection = filteredActiveCourseSection;
 
         return (
             <View style={styles.courseLayout}>
@@ -3170,11 +3278,11 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                     <View style={styles.coursePanelHeader}>
                         <Text style={styles.coursePanelLabel}>Sections</Text>
                         <View style={styles.coursePanelCountPill}>
-                            <Text style={styles.coursePanelCountText}>{courseSections.length}</Text>
+                            <Text style={styles.coursePanelCountText}>{filteredCourseSections.length}</Text>
                         </View>
                     </View>
                     <FlatList
-                        data={courseSections}
+                        data={filteredCourseSections}
                         keyExtractor={(item) => item.key}
                         scrollEnabled={false}
                         ItemSeparatorComponent={() => <View style={{ height: verticalScale(10) }} />}
@@ -3389,6 +3497,17 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScrollContent}>
+                    <View style={styles.detailSearchWrap}>
+                        <Input
+                            placeholder="Search mock tests or study materials..."
+                            leftIcon="search-outline"
+                            value={detailSearchQuery}
+                            onChangeText={setDetailSearchQuery}
+                            containerStyle={styles.detailSearchZeroMargin}
+                            inputContainerStyle={styles.detailSearchInput}
+                            inputStyle={styles.detailSearchText}
+                        />
+                    </View>
 
                     {detailTabs.length > 0 ? (
                         <>
@@ -3450,46 +3569,55 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                         <>
                             <Text style={styles.sectionTitle}>Course Curriculum</Text>
                             <Text style={styles.subjectSubtitle}>
-                                {`${subBundleItems.length} course${subBundleItems.length === 1 ? '' : 's'} available in this course`}
+                                {`${filteredSubBundleItems.length} course${filteredSubBundleItems.length === 1 ? '' : 's'} available in this course`}
                             </Text>
 
-                            <View style={styles.subjectList}>
-                                <View style={styles.quizCardsWrap}>
-                                    {subBundleItems.map((subBundle: any, index: number) => {
-                                        const normalizedSubBundle = getBundlePayload(subBundle);
-                                        const mockCount = getBundleMockCount(normalizedSubBundle);
-
-                                        return (
-                                            <Pressable
-                                                key={String(getBundleId(normalizedSubBundle) || index)}
-                                                style={styles.quizCardPressable}
-                                                onPress={() => handleSubBundlePress(normalizedSubBundle)}
-                                            >
-                                                <LinearGradient
-                                                    colors={['#ECFDF5', '#FFFFFF']}
-                                                    start={{ x: 0, y: 0 }}
-                                                    end={{ x: 1, y: 1 }}
-                                                    style={styles.quizCard}
-                                                >
-                                                    <Text style={styles.quizCardTitle}>{normalizedSubBundle?.title || normalizedSubBundle?.name || `Sub Bundle ${index + 1}`}</Text>
-
-                                                    <View style={styles.quizMetaRow}>
-                                                        <View style={styles.quizMetaItem}>
-                                                            <Feather name="layers" size={normalize(14)} color="#667085" />
-                                                            <Text style={styles.quizMetaText}>{mockCount} Mock Test{mockCount === 1 ? '' : 's'}</Text>
-                                                        </View>
-                                                    </View>
-
-                                                    <View style={styles.quizActionButton}>
-                                                        <Text style={styles.quizActionText}>Explore Curriculum</Text>
-                                                        <Feather name="chevron-right" size={normalize(14)} color="#FFFFFF" />
-                                                    </View>
-                                                </LinearGradient>
-                                            </Pressable>
-                                        );
-                                    })}
+                            {filteredSubBundleItems.length === 0 ? (
+                                <View style={styles.emptyStateBox}>
+                                    <Feather name="search" size={normalize(24)} color="#94A3B8" />
+                                    <Text style={styles.emptyStateText}>
+                                        {normalizedDetailSearchQuery ? 'No matching courses found' : 'No Data Available'}
+                                    </Text>
                                 </View>
-                            </View>
+                            ) : (
+                                <View style={styles.subjectList}>
+                                    <View style={styles.quizCardsWrap}>
+                                        {filteredSubBundleItems.map((subBundle: any, index: number) => {
+                                            const normalizedSubBundle = getBundlePayload(subBundle);
+                                            const mockCount = getBundleMockCount(normalizedSubBundle);
+
+                                            return (
+                                                <Pressable
+                                                    key={String(getBundleId(normalizedSubBundle) || index)}
+                                                    style={styles.quizCardPressable}
+                                                    onPress={() => handleSubBundlePress(normalizedSubBundle)}
+                                                >
+                                                    <LinearGradient
+                                                        colors={['#ECFDF5', '#FFFFFF']}
+                                                        start={{ x: 0, y: 0 }}
+                                                        end={{ x: 1, y: 1 }}
+                                                        style={styles.quizCard}
+                                                    >
+                                                        <Text style={styles.quizCardTitle}>{normalizedSubBundle?.title || normalizedSubBundle?.name || `Sub Bundle ${index + 1}`}</Text>
+
+                                                        <View style={styles.quizMetaRow}>
+                                                            <View style={styles.quizMetaItem}>
+                                                                <Feather name="layers" size={normalize(14)} color="#667085" />
+                                                                <Text style={styles.quizMetaText}>{mockCount} Mock Test{mockCount === 1 ? '' : 's'}</Text>
+                                                            </View>
+                                                        </View>
+
+                                                        <View style={styles.quizActionButton}>
+                                                            <Text style={styles.quizActionText}>Explore Curriculum</Text>
+                                                            <Feather name="chevron-right" size={normalize(14)} color="#FFFFFF" />
+                                                        </View>
+                                                    </LinearGradient>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </View>
+                                </View>
+                            )}
                         </>
                     ) : (
                         <>
@@ -4412,9 +4540,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                         : 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1'
                                 }
                                 renderLoading={() => (
-                                <View style={styles.paymentWebViewLoading}>
-                                    <SubjectBankSkeleton />
-                                </View>
+                                    <View style={styles.paymentWebViewLoading}>
+                                        <SubjectBankSkeleton />
+                                    </View>
                                 )}
                                 onNavigationStateChange={(navState) => {
                                     const currentUrl = String(navState.url || '');
@@ -4429,9 +4557,9 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                 }}
                             />
                         ) : (
-                        <View style={styles.paymentWebViewLoading}>
-                            <SubjectBankSkeleton />
-                        </View>
+                            <View style={styles.paymentWebViewLoading}>
+                                <SubjectBankSkeleton />
+                            </View>
                         )}
                     </View>
                 </View>
@@ -4783,6 +4911,21 @@ const styles = StyleSheet.create({
     detailScrollContent: {
         paddingHorizontal: normalize(20),
         paddingTop: verticalScale(20),
+    },
+    detailSearchWrap: {
+        marginBottom: verticalScale(14),
+    },
+    detailSearchZeroMargin: {
+        marginBottom: 0,
+    },
+    detailSearchInput: {
+        backgroundColor: '#FFFFFF',
+        borderColor: '#D8E6F8',
+        borderRadius: normalize(12),
+    },
+    detailSearchText: {
+        color: theme.colors.text,
+        fontSize: normalize(14),
     },
     sectionTitle: {
         fontSize: normalize(16),

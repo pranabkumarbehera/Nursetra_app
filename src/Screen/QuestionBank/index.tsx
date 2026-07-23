@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useMemo, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -8,13 +8,47 @@ import { Header } from '../../Components/headers/Header';
 import { Input } from '../../Components/inputs/Input';
 import { QUESTION_BANK_CATEGORIES, SUBJECT_TESTS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../../Redux/Store';
+import { paymentHistoryRequest } from '../../Redux/Reducers/ProfileReducer';
 
 const isNorcertDhmakaLabel = (value: string = '') => /norcert\s*(dhamaka|dhmaka)/i.test(String(value || '').trim());
 export const QuestionBankScreen = () => {
   const navigation = useNavigation<any>();
+  const dispatch = useDispatch();
+  const { paymentHistoryData } = useSelector((state: RootState) => state.ProfileReducer);
+
+  useEffect(() => {
+    if (!paymentHistoryData) {
+      dispatch(paymentHistoryRequest({ page: 1, limit: 100 }));
+    }
+  }, [dispatch, paymentHistoryData]);
+
+  const hasCategoryAccess = useMemo(() => {
+    const paymentsList = paymentHistoryData?.data?.items || paymentHistoryData?.items || paymentHistoryData?.data || (Array.isArray(paymentHistoryData) ? paymentHistoryData : []);
+    if (!Array.isArray(paymentsList)) return false;
+
+    let hasAllSubjectBundle = false;
+    let completedSubjectCount = 0;
+
+    paymentsList.forEach((item: any) => {
+      const status = String(item?.status || '').toLowerCase();
+      const isSuccess = status === 'captured' || status === 'success' || status === 'paid' || status === 'completed';
+
+      if (isSuccess) {
+        if (item?.resourceTitle === 'All Subject Bundle') {
+          hasAllSubjectBundle = true;
+        } else {
+          completedSubjectCount++;
+        }
+      }
+    });
+
+    return hasAllSubjectBundle || completedSubjectCount >= 2;
+  }, [paymentHistoryData]);
+
   const [selectedExam, setSelectedExam] = useState('All');
-  const [selectedMode, setSelectedMode] = useState<'category' | 'subject'>('category');
+  const [selectedMode, setSelectedMode] = useState<'category' | 'subject'>('subject');
   const [searchQuery, setSearchQuery] = useState('');
 
   const subjectItems = useMemo(
@@ -82,7 +116,17 @@ export const QuestionBankScreen = () => {
             <View style={styles.segmentedControl}>
               <TouchableOpacity
                 style={[styles.segmentButton, selectedMode === 'category' && styles.segmentButtonActive]}
-                onPress={() => setSelectedMode('category')}
+                onPress={() => {
+                  if (!hasCategoryAccess) {
+                    Alert.alert(
+                      'Access Required',
+                      'You need to purchase the "All Subject Bundle" or at least 2 subjects to access Category Exams.',
+                      [{ text: 'OK' }]
+                    );
+                  } else {
+                    setSelectedMode('category');
+                  }
+                }}
               >
                 <Text style={[styles.segmentText, selectedMode === 'category' && styles.segmentTextActive]}>By Category Exam</Text>
               </TouchableOpacity>
