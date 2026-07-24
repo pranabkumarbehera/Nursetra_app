@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Colorpath from '../../Themes/Colorpath';
@@ -71,6 +71,7 @@ type MockBankScreenProps = {
 };
 
 export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
+    const insets = useSafeAreaInsets();
     const dispatch = useDispatch();
     const isFocused = useIsFocused();
     const route = useRoute<any>();
@@ -334,7 +335,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
     const showLoadingSkeleton = isLoading || loadingCategories || loadingSubCategories || paymentHistoryLoading;
 
     return (
-        <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]} edges={['top', 'left', 'right']}>
             <StatusBar backgroundColor="#FAFBFF" barStyle="dark-content" />
 
             <View style={styles.header}>
@@ -346,7 +347,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
             {showLoadingSkeleton ? (
                 <MockBankSkeleton />
             ) : (
-            <ScrollView ref={scrollRef} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView ref={scrollRef} contentContainerStyle={[styles.scrollContent, { paddingBottom: verticalScale(112) + insets.bottom }]} showsVerticalScrollIndicator={false}>
                 <Text style={styles.sectionSubtitle}>Practice with real exam scenarios.</Text>
 
                 {/* Search Bar */}
@@ -544,7 +545,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
                     );
                 })}
 
-                <View style={{ height: verticalScale(100) }} />
+                <View style={{ height: verticalScale(28) }} />
             </ScrollView>
             )}
             <CategoriesFAB />

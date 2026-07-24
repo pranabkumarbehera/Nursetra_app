@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Fonts, theme } from '../../Themes';
 import { Header } from '../../Components/headers/Header';
@@ -8,6 +8,7 @@ import { EXAM_CATEGORIES, PREVIOUS_YEAR_QUESTIONS, PREVIOUS_YEAR_YEARS } from '.
 import { SecurityNotice } from '../../Components/security/SecurityNotice';
 
 export const PYQ = () => {
+  const insets = useSafeAreaInsets();
   const [selectedYear, setSelectedYear] = useState(PREVIOUS_YEAR_YEARS[0]);
   const [selectedCourse, setSelectedCourse] = useState('All');
   const [openDropdown, setOpenDropdown] = useState<'year' | 'course' | null>(null);
@@ -41,7 +42,7 @@ export const PYQ = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]} edges={['top', 'left', 'right']}>
       <Header title="Previous Year Questions" />
 
       <View style={styles.filterSection}>

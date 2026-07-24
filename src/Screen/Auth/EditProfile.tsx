@@ -87,7 +87,7 @@ export const EditProfileScreen = () => {
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 96, 120) }]} showsVerticalScrollIndicator={false}>
           <View style={styles.avatarCard}>
             <View style={styles.avatar}>
               <Icon name="person" size={36} color={theme.colors.white} />

@@ -191,7 +191,7 @@ export const HomeScreen = () => {
     return (
       <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]} edges={['top', 'left', 'right']}>
         <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" translucent={false} />
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 96, 120) }]} showsVerticalScrollIndicator={false}>
           <HomeSkeleton />
         </ScrollView>
         <CategoriesFAB />
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', gap: 12 },
   headerButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
   notificationBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: Colorpath.Danger },
-  scrollContent: { paddingBottom: 60 },
+  scrollContent: { paddingBottom: 24 },
   heroWrapper: { paddingHorizontal: 20, marginBottom: 24 },
   heroCard: { backgroundColor: theme.colors.primary, borderRadius: 24, overflow: 'hidden', padding: 24, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.25, shadowRadius: 20, elevation: 8 },
   heroBgCircle1: { position: 'absolute', top: -50, right: -20, width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.1)' },

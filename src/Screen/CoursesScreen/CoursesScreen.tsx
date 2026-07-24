@@ -3496,7 +3496,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                     </SafeAreaView>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.detailScrollContent}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.detailScrollContent, { paddingBottom: Math.max(insets.bottom + verticalScale(112), verticalScale(140)) }]}>
                     <View style={styles.detailSearchWrap}>
                         <Input
                             placeholder="Search mock tests or study materials..."
@@ -3837,7 +3837,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                         }
 
                                         return (
-                                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.noteViewerDetailScroll}>
+                                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.noteViewerDetailScroll, { paddingBottom: Math.max(insets.bottom + verticalScale(24), verticalScale(48)) }]}>
                                                 <View style={styles.noteViewerDetailCard}>
                                                     <View style={styles.noteViewerDetailTopRow}>
                                                         <Text style={styles.noteViewerDetailTag}>PAGE {selectedNotePageIndex + 1}</Text>
@@ -3961,7 +3961,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                         const year = toDisplayText(getQuestionBankYear(selectedQuestionBankMeta || currentQuestion), '');
 
                                         return (
-                                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.questionBankDetailScroll}>
+                                            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.questionBankDetailScroll, { paddingBottom: Math.max(insets.bottom + verticalScale(24), verticalScale(48)) }]}>
                                                 <View style={styles.questionBankDetailCard}>
                                                     <View style={styles.questionBankDetailTopRow}>
                                                         <Text style={styles.questionBankDetailTag}>QUESTION {selectedQuestionIndex + 1}</Text>
@@ -4052,7 +4052,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                             </View>
                         </SafeAreaView>
 
-                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.questionAnswerScrollContent}>
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.questionAnswerScrollContent, { paddingBottom: Math.max(insets.bottom + verticalScale(24), verticalScale(48)) }]}>
                             <View style={styles.questionAnswerCard}>
                                 {selectedQuestionAnswerDetail?.answer ? (
                                     <Text style={styles.questionAnswerBody}>{selectedQuestionAnswerDetail.answer}</Text>
@@ -4283,7 +4283,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                 </View>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + verticalScale(112), verticalScale(140)) }]}>
                 <View style={styles.qBankSurfaceCard}>
                     <View style={styles.segmentedControl}>
                         <Pressable

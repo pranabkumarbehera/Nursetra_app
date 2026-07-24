@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, Pressable } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Fonts, theme } from '../Themes';
@@ -15,12 +15,16 @@ const Tab = createBottomTabNavigator();
 
 export const BottomTabs = () => {
   const insets = useSafeAreaInsets();
+  const tabBarBottomInset = Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 0);
   
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarHideOnKeyboard: true,
+        tabBarShowLabel: true,
+        tabBarLabelPosition: 'below-icon',
+        tabBarItemStyle: styles.tabBarItem,
         tabBarIcon: ({ focused, color }) => {
           let iconName = 'ellipse-outline';
 
@@ -44,9 +48,9 @@ export const BottomTabs = () => {
           backgroundColor: theme.colors.white,
           borderTopWidth: 1,
           borderTopColor: '#E5E7EB',
-          height: Platform.OS === 'ios' ? (insets.bottom > 0 ? 88 : 74) : 68 + (insets.bottom > 0 ? insets.bottom : 8),
-          paddingTop: 10,
-          paddingBottom: Platform.OS === 'ios' ? (insets.bottom > 0 ? 25 : 10) : (insets.bottom > 0 ? insets.bottom : 8),
+          height: Platform.OS === 'ios' ? (insets.bottom > 0 ? 88 : 74) : 64 + tabBarBottomInset,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === 'ios' ? (insets.bottom > 0 ? 22 : 10) : tabBarBottomInset,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.05,
@@ -56,24 +60,27 @@ export const BottomTabs = () => {
         tabBarLabelStyle: {
           ...theme.typography.small,
           fontFamily: Fonts.intermedium,
-          marginTop: 4,
+          marginTop: 2,
+          textAlign: 'center',
         },
         tabBarButton: props => {
-          const { style, ...restProps } = props as any;
+          const { style, children, ...restProps } = props as any;
 
           return (
             <Pressable
               {...restProps}
               android_ripple={{ color: 'transparent', borderless: false }}
               style={({ pressed }) => [
+                styles.tabBarButton,
                 style,
                 {
-                  opacity: 1,
-                  backgroundColor: '#FFFFFF',
+                  opacity: pressed ? 0.72 : 1,
+                  backgroundColor: 'transparent',
                 },
-                Platform.OS === 'ios' && pressed ? { opacity: 1 } : null,
               ]}
-            />
+            >
+              {children}
+            </Pressable>
           );
         },
       })}
@@ -99,3 +106,17 @@ export const BottomTabs = () => {
     </Tab.Navigator>
   );
 };
+
+const styles = StyleSheet.create({
+  tabBarItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+  },
+  tabBarButton: {
+    flex: 1,
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

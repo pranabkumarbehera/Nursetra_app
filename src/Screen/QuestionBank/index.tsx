@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { Fonts, theme } from '../../Themes';
@@ -14,6 +14,7 @@ import { paymentHistoryRequest } from '../../Redux/Reducers/ProfileReducer';
 
 const isNorcertDhmakaLabel = (value: string = '') => /norcert\s*(dhamaka|dhmaka)/i.test(String(value || '').trim());
 export const QuestionBankScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   const { paymentHistoryData } = useSelector((state: RootState) => state.ProfileReducer);
@@ -93,7 +94,7 @@ export const QuestionBankScreen = () => {
   }, [searchQuery, selectedExam, selectedMode, categoryExamItems, subjectModeItems]);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]} edges={['top', 'left', 'right']}>
       <View style={styles.headerBackground}>
         <Header title="Q.Bank" rightIcon="options-outline" light style={styles.header} />
 
@@ -169,7 +170,7 @@ export const QuestionBankScreen = () => {
             <Text style={styles.emptyText}>Try another exam filter, mode, or search keyword.</Text>
           </View>
         }
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[styles.listContainer, { paddingBottom: Math.max(insets.bottom + 96, 120) }]}
         showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>

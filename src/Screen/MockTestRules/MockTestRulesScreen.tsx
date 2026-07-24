@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import Toast from 'react-native-toast-message';
 import { useDispatch, useSelector } from 'react-redux';
@@ -56,6 +56,7 @@ const getQuizNegativeMarking = (quiz: any) => {
 };
 
 const MockTestRulesScreen = ({ navigation, route }: MockTestRulesScreenProps) => {
+    const insets = useSafeAreaInsets();
     const { testId, testData } = route.params || {};
     const dispatch = useDispatch();
     const { mockTestDetails, isLoading, status, startTestResponse } = useSelector((state: RootState) => state.MockTestReducer);
@@ -121,7 +122,7 @@ const MockTestRulesScreen = ({ navigation, route }: MockTestRulesScreenProps) =>
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]} edges={['top', 'left', 'right']}>
             <View style={styles.header}>
                 <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
                     <Icon name="arrow-left" size={18} color={BUTTON_COLOR} />
@@ -130,7 +131,7 @@ const MockTestRulesScreen = ({ navigation, route }: MockTestRulesScreenProps) =>
                 <View style={styles.headerSpacer} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + verticalScale(96), verticalScale(120)) }]} showsVerticalScrollIndicator={false}>
                 <LinearGradient colors={['#667EEA', '#764BA2']} start={{x: 0, y: 0}} end={{x: 1, y: 1}} style={styles.infoCard}>
                     <View style={styles.titleRow}>
                         <Text style={[styles.courseTitle, {color: '#FFFFFF'}]}>{title}</Text>

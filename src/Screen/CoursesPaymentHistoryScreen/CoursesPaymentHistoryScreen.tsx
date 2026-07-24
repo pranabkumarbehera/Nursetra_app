@@ -9,7 +9,7 @@ import {
     RefreshControl,
     ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
@@ -49,6 +49,7 @@ const colPrice = { width: normalize(80) };
 const colStatus = { width: normalize(115) };
 
 export const CoursesPaymentHistoryScreen = () => {
+    const insets = useSafeAreaInsets();
     const navigation = useNavigation();
     const dispatch = useDispatch();
     const { paymentHistoryData, paymentHistoryLoading, paymentHistoryError } = useSelector(
@@ -163,7 +164,7 @@ export const CoursesPaymentHistoryScreen = () => {
     const isLoadingMore = paymentHistoryLoading && page > 1;
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]}>
             <StatusBar backgroundColor={Colorpath.Primary} barStyle="light-content" />
 
             {/* Back Header */}

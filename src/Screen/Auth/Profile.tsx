@@ -322,7 +322,7 @@ export const ProfileScreen = ({ navigation }: any) => {
             ) : (
                 <>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { paddingBottom: verticalScale(140) + insets.bottom }]}>
                 <LinearGradient colors={HEADER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headerBackground}>
                     <View style={styles.headerGlowOne} />
                     <View style={styles.headerGlowTwo} />
