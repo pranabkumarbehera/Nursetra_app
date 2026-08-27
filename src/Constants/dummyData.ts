@@ -60,7 +60,7 @@ export const QUICK_ACTIONS = [
   { id: '3', title: 'Subject Tests', icon: 'flask', route: 'SubjectTestsScreen' },
   { id: '4', title: 'Daily Test', icon: 'calendar', route: 'MockTestsScreen' },
   { id: '5', title: 'Mock Test', icon: 'ribbon', route: 'MockTestsScreen' },
-  { id: '6', title: 'PYQ Papers', icon: 'document-text', route: 'PYQScreen' },
+  { id: '6', title: 'All Subject Bundle', icon: 'document-text', route: 'CourseScreen' },
 ];
 
 export const QUESTION_BANK_CATEGORIES = [

@@ -222,13 +222,18 @@ export const SplashScreen = () => {
                     // Let the global API interceptor handle expired sessions when possible.
                   }
 
-                  await (AsyncStorage as any).multiRemove([
+                  const keysToRemove = [
                     constants.TOKEN,
                     constants.REFRESH_TOKEN,
                     constants.USER_DATA,
                     constants.SAVED_EMAIL,
                     constants.SAVED_PASSWORD,
-                  ]);
+                  ];
+                  if (typeof (AsyncStorage as any).multiRemove === 'function') {
+                    await (AsyncStorage as any).multiRemove(keysToRemove);
+                  } else {
+                    await Promise.all(keysToRemove.map(key => AsyncStorage.removeItem(key)));
+                  }
                   await AsyncStorage.setItem(constants.REMEMBER_PASSWORD, 'false');
                   dispatch(tokenSuccess(null));
                   dispatch(clearProfile());

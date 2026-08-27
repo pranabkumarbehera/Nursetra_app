@@ -6,6 +6,7 @@ import {
     bootstrapHomeSuccess,
 } from '../Reducers/HomeReducer';
 import { getApi } from '../../Utils/Helpers/ApiRequest';
+import { mergeDashboardWithHistory } from '../../Utils/Helpers/home';
 
 const getAuth = (state: any) => state.AuthReducer;
 
@@ -22,7 +23,19 @@ export function* bootstrapHomeSaga(): Generator<any, void, any> {
     try {
         const dashboardResponse = yield call(getApi, 'student/dashboard', header);
         if (dashboardResponse?.data?.success === true || dashboardResponse?.status === 200) {
-            yield put(bootstrapHomeSuccess(dashboardResponse?.data?.data || dashboardResponse?.data));
+            const dashboardData = dashboardResponse?.data?.data || dashboardResponse?.data;
+            try {
+                const historyResponse = yield call(getApi, 'student/history?limit=100', header);
+                if (historyResponse?.data?.success === true || historyResponse?.status === 200) {
+                    yield put(bootstrapHomeSuccess(
+                        mergeDashboardWithHistory(dashboardData, historyResponse?.data?.data || historyResponse?.data)
+                    ));
+                } else {
+                    yield put(bootstrapHomeSuccess(dashboardData));
+                }
+            } catch {
+                yield put(bootstrapHomeSuccess(dashboardData));
+            }
         } else {
             yield put(bootstrapHomeFailure(dashboardResponse?.data));
             Toast.show({ type: 'error', text1: dashboardResponse?.data?.message || 'Failed to fetch dashboard' });

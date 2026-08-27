@@ -413,7 +413,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                         </View>
                     </View>
 
-                    <Text style={styles.sectionTitle}>My Learning</Text>
+                    <Text style={styles.sectionTitle}>Performance & Activity</Text>
                     <View style={styles.settingsContainer}>
                         <Pressable style={styles.settingItem} onPress={() => Toast.show({ type: 'info', text1: 'Coming Soon' })}>
                             <LinearGradient colors={SOFT_BLUE_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.settingIconBg}>
@@ -430,7 +430,7 @@ export const ProfileScreen = ({ navigation }: any) => {
                                 <Icon name="bar-chart-2" size={normalize(18)} color="#34C759" />
                             </LinearGradient>
                             <View style={styles.settingCopy}>
-                                <Text style={styles.settingText}>My Results</Text>
+                                <Text style={styles.settingText}>View Result</Text>
                                 <Text style={styles.settingSubText}>Track your mock test progress</Text>
                             </View>
                             <Icon name="chevron-right" size={normalize(18)} color="#9CA3AF" />

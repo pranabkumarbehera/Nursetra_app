@@ -9,7 +9,7 @@ import { bootstrapHomeRequest } from '../../Redux/Reducers/HomeReducer';
 import { getProfileRequest } from '../../Redux/Reducers/ProfileReducer';
 import { clearTestResult, getTestResultRequest } from '../../Redux/Reducers/MockTestReducer';
 import { logoutRequest } from '../../Redux/Reducers/AuthReducer';
-import { getProfileName, normalizeDashboardStats, normalizeRecentItems, formatPercent, formatScore, formatDisplayDate } from '../../Utils/Helpers/home';
+import { getProfileName, normalizeDashboardStats, normalizeRecentItems, formatPercent, formatScore, formatDisplayDate, resolveDashboardRank } from '../../Utils/Helpers/home';
 import { Colorpath, Fonts, theme } from '../../Themes';
 import { QUICK_ACTIONS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
@@ -60,7 +60,7 @@ export const HomeScreen = () => {
   const avgAccuracy = formatPercent(
     homeState.dashboardData?.avgAccuracy ?? homeState.dashboardData?.averageAccuracy ?? homeState.dashboardData?.average_accuracy ?? homeState.dashboardData?.stats?.avgAccuracy ?? homeState.dashboardData?.summary?.avgAccuracy ?? stats.accuracy
   );
-  const rank = stats.rank || homeState.dashboardData?.rank || homeState.dashboardData?.allIndiaRank || homeState.dashboardData?.air || homeState.dashboardData?.stats?.rank || '-';
+  const rank = resolveDashboardRank(homeState.dashboardData) ?? stats.rank ?? '-';
   const streak = homeState.dashboardData?.dayStreak ?? homeState.dashboardData?.streak ?? homeState.dashboardData?.stats?.dayStreak ?? homeState.dashboardData?.summary?.dayStreak ?? 0;
   const testsDone = homeState.dashboardData?.testsCompleted ?? homeState.dashboardData?.completedAttempts ?? homeState.dashboardData?.stats?.testsCompleted ?? homeState.dashboardData?.summary?.testsCompleted ?? homeState.dashboardData?.completedTests ?? 0;
 

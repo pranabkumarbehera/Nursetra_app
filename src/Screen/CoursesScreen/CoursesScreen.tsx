@@ -197,6 +197,23 @@ const getSubBundleItems = (subBundleList: any) =>
             )
     ).map(getBundlePayload);
 
+const uniqueBundlesById = (bundles: any[]) => {
+    const seen = new Set<string>();
+
+    return bundles.filter((bundle: any, index: number) => {
+        const normalizedBundle = getBundlePayload(bundle);
+        const bundleId = String(getBundleId(normalizedBundle) || '').trim();
+        const dedupeKey = bundleId || `fallback-${index}`;
+
+        if (seen.has(dedupeKey)) {
+            return false;
+        }
+
+        seen.add(dedupeKey);
+        return true;
+    });
+};
+
 const parseMaybeJson = (value: any) => {
     if (typeof value !== 'string') {
         return value;
@@ -2132,6 +2149,43 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
     const authToken = useSelector((state: RootState) => state.AuthReducer.token);
     const { paymentHistoryData, paymentHistoryLoading } = useSelector((state: RootState) => state.ProfileReducer);
+    const resetSubjectBankView = useCallback(() => {
+        setMainTab('subject');
+        setExpandedCategory(null);
+        setViewMoreStates({});
+        setSelectedModule(null);
+        setSelectedExam(null);
+        setSelectedSubBundleExam(null);
+        setActiveBundleId(null);
+        setActiveSubBundleId(null);
+        setActiveDetailTab('mock');
+        setActiveCourseSection('');
+        setSearchQuery('');
+        setDetailSearchQuery('');
+        setShowNoteViewerModal(false);
+        setSelectedNoteBankTitle('');
+        setSelectedNotePages([]);
+        setSelectedNotePageIndex(0);
+        setShowNotePageModal(false);
+        setSelectedNotePageDetail(null);
+        setShowQuestionBankModal(false);
+        setIsLoadingQuestionBank(false);
+        setSelectedQuestionBankTitle('');
+        setSelectedQuestionBankQuestions([]);
+        setSelectedQuestionIndex(0);
+        setSelectedQuestionBankMeta(null);
+        setShowQuestionAnswer(false);
+        setShowQuestionAnswerModal(false);
+        setSelectedQuestionAnswerDetail(null);
+        setShowVideoBankModal(false);
+        setIsLoadingVideoBank(false);
+        setSelectedVideoBankTitle('');
+        setSelectedVideoBankItems([]);
+        setShowDocumentFolderModal(false);
+        setSelectedDocumentFolderTitle('');
+        setDownloadingDocId(null);
+        setSubjectBankSkeletonVisible(false);
+    }, []);
 
     const bundleItems = useMemo(() => getBundleItems(bundleList), [bundleList]);
     const subBundleItems = useMemo(() => getSubBundleItems(subBundleList), [subBundleList]);
@@ -2309,10 +2363,11 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
 
     useEffect(() => {
         if (isFocused) {
+            resetSubjectBankView();
             dispatch(getStudentModulesRequest({}));
             dispatch(paymentHistoryRequest({ page: 1, limit: 100 }));
         }
-    }, [dispatch, isFocused]);
+    }, [dispatch, isFocused, resetSubjectBankView]);
 
     useEffect(() => {
         return () => {
@@ -4367,9 +4422,10 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                     return getNursingSubjectName(String(subjectLabel).trim()) === title;
                                 }
                             });
+                            const uniqueMatchingBundles = uniqueBundlesById(matchingBundles);
 
                             let totalQuestions = 0;
-                            matchingBundles.forEach((b: any) => {
+                            uniqueMatchingBundles.forEach((b: any) => {
                                 const quizzes = getBundleQuizzes(getBundlePayload(b));
                                 quizzes.forEach((q: any) => {
                                     totalQuestions += getQuizQuestionCount(q) || 10;
@@ -4438,7 +4494,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                     </Pressable>
                                     {expandedCategory === title && (
                                         <View style={styles.expandedCategoryContainer}>
-                                            {matchingBundles
+                                            {uniqueMatchingBundles
                                                 .slice(0, viewMoreStates[title] ? undefined : 2)
                                                 .map((bundle: any, bIndex: number) => {
                                                     const normalizedBundle = getBundlePayload(bundle);
@@ -4471,7 +4527,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                                         />
                                                     );
                                                 })}
-                                            {matchingBundles.length > 2 && (
+                                            {uniqueMatchingBundles.length > 2 && (
                                                 <TouchableOpacity
                                                     style={styles.viewMoreBtn}
                                                     onPress={() => {
@@ -4479,7 +4535,7 @@ const CoursesScreen = ({ navigation }: CoursesScreenProps) => {
                                                     }}
                                                 >
                                                     <Text style={styles.viewMoreBtnText}>
-                                                        {viewMoreStates[title] ? 'View Less' : `View More (${matchingBundles.length - 2})`}
+                                                        {viewMoreStates[title] ? 'View Less' : `View More (${uniqueMatchingBundles.length - 2})`}
                                                     </Text>
                                                     <Feather name={viewMoreStates[title] ? 'chevron-up' : 'chevron-down'} size={16} color="#1D4ED8" />
                                                 </TouchableOpacity>

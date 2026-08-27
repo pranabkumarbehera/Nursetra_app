@@ -7,6 +7,139 @@ const asNumber = (value: any) => {
 
 const firstDefined = (...values: any[]) => values.find(value => value !== undefined && value !== null && value !== '');
 
+const firstNonEmpty = (...values: any[]) =>
+    values.find(value => value !== undefined && value !== null && !(typeof value === 'string' && value.trim() === ''));
+
+const RANK_KEYS = new Set([
+    'rank',
+    'rankvalue',
+    'rank_value',
+    'rankposition',
+    'rank_position',
+    'allindiarank',
+    'all_india_rank',
+    'overallrank',
+    'overall_rank',
+    'air',
+    'airrank',
+    'air_rank',
+]);
+
+const normalizeRankValue = (value: any): string | null => {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        return trimmed || null;
+    }
+
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? String(value) : null;
+    }
+
+    if (typeof value === 'object') {
+        return firstNonEmpty(
+            normalizeRankValue(value?.rank),
+            normalizeRankValue(value?.value),
+            normalizeRankValue(value?.label),
+            normalizeRankValue(value?.text),
+            normalizeRankValue(value?.position),
+            normalizeRankValue(value?.overallRank),
+            normalizeRankValue(value?.overall_rank),
+            normalizeRankValue(value?.allIndiaRank),
+            normalizeRankValue(value?.air),
+        );
+    }
+
+    return String(value);
+};
+
+const findRankDeep = (source: any, depth = 0, seen = new Set<any>()): string | null => {
+    if (!source || typeof source !== 'object' || depth > 5 || seen.has(source)) {
+        return null;
+    }
+
+    seen.add(source);
+
+    if (Array.isArray(source)) {
+        for (const item of source) {
+            const found: string | null = findRankDeep(item, depth + 1, seen);
+            if (found) return found;
+        }
+        return null;
+    }
+
+    for (const [key, value] of Object.entries(source)) {
+        const normalizedKey = String(key).replace(/[^a-z0-9]/gi, '').toLowerCase();
+        if (RANK_KEYS.has(normalizedKey)) {
+            const normalizedValue = normalizeRankValue(value);
+            if (normalizedValue) {
+                return normalizedValue;
+            }
+        }
+
+        const found: string | null = findRankDeep(value, depth + 1, seen);
+        if (found) return found;
+    }
+
+    return null;
+};
+
+const getRecentItemKey = (item: any, index: number) => {
+    const id = firstNonEmpty(
+        item?.attemptId,
+        item?.id,
+        item?._id,
+        item?.resultId,
+        item?.quizId,
+    );
+
+    if (id) {
+        return String(id);
+    }
+
+    return [
+        item?.title,
+        item?.submittedAt,
+        item?.date,
+        item?.createdAt,
+        item?.updatedAt,
+        item?.completedAt,
+        index,
+    ]
+        .map(value => (value === undefined || value === null ? '' : String(value)))
+        .join('|');
+};
+
+const dedupeRecentItems = (items: any[]) => {
+    const seen = new Set<string>();
+    return items.filter((item, index) => {
+        const key = getRecentItemKey(item, index);
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
+};
+
+export const resolveDashboardRank = (dashboard: any) =>
+    firstNonEmpty(
+        findRankDeep(dashboard),
+        findRankDeep(dashboard?.data),
+        findRankDeep(dashboard?.data?.data),
+        findRankDeep(dashboard?.student),
+        findRankDeep(dashboard?.student?.data),
+        findRankDeep(dashboard?.summary),
+        findRankDeep(dashboard?.stats),
+        findRankDeep(dashboard?.overview),
+        findRankDeep(dashboard?.dashboard),
+        findRankDeep(dashboard?.overallRank),
+        findRankDeep(dashboard?.overall_rank),
+    ) || null;
+
 const toWords = (value: string) =>
     value
         .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -199,7 +332,12 @@ export const normalizeDashboardStats = (dashboard: any) => {
     const dashboardSources = [
         dashboard,
         dashboard?.data,
+        dashboard?.data?.dashboard,
+        dashboard?.data?.summary,
+        dashboard?.data?.stats,
+        dashboard?.data?.overview,
         dashboard?.student,
+        dashboard?.student?.data,
         dashboard?.user,
         dashboard?.profile,
         dashboard?.summary,
@@ -223,15 +361,15 @@ export const normalizeDashboardStats = (dashboard: any) => {
         score: firstDefined(summary?.score, summary?.totalScore, summary?.avgScore, summary?.averageScore, summary?.points),
         accuracy: firstDefined(summary?.accuracy, summary?.accuracyPercentage, summary?.avgAccuracy, summary?.averageAccuracy, calculatedAverageAccuracy),
         timeSpent: firstDefined(summary?.timeSpent, summary?.timeSpend, summary?.timeTaken, summary?.studyTime, summary?.totalTimeSpent),
-        rank: firstDefined(
-            ...dashboardSources.map(source => source?.rank),
-            ...dashboardSources.map(source => source?.allIndiaRank),
-            ...dashboardSources.map(source => source?.air),
-        ),
+        rank: resolveDashboardRank(dashboard),
     };
 };
 
 const getRecentCollections = (dashboard: any) => {
+    if (Array.isArray(dashboard?._mergedRecentItems)) {
+        return dashboard._mergedRecentItems;
+    }
+
     const candidates = [
         dashboard?.recentMocks,
         dashboard?.recentCourses,
@@ -239,9 +377,30 @@ const getRecentCollections = (dashboard: any) => {
         dashboard?.recentTests,
         dashboard?.latestAttempts,
         dashboard?.items,
+        dashboard?.history,
+        dashboard?.activity,
+        dashboard?.activities,
+        dashboard?.results,
         dashboard?.data?.recentMocks,
         dashboard?.data?.recentCourses,
         dashboard?.data?.recentAttempts,
+        dashboard?.data?.recentTests,
+        dashboard?.data?.latestAttempts,
+        dashboard?.data?.items,
+        dashboard?.data?.history,
+        dashboard?.data?.activity,
+        dashboard?.data?.activities,
+        dashboard?.data?.results,
+        dashboard?.data?.dashboard?.recentMocks,
+        dashboard?.data?.dashboard?.recentCourses,
+        dashboard?.data?.dashboard?.recentAttempts,
+        dashboard?.data?.dashboard?.recentTests,
+        dashboard?.data?.dashboard?.latestAttempts,
+        dashboard?.data?.dashboard?.items,
+        dashboard?.data?.dashboard?.history,
+        dashboard?.data?.dashboard?.activity,
+        dashboard?.data?.dashboard?.activities,
+        dashboard?.data?.dashboard?.results,
     ];
 
     return candidates.find(Array.isArray) || [];
@@ -281,6 +440,46 @@ export const normalizeRecentItem = (item: any, index: number) => {
 };
 
 export const normalizeRecentItems = (dashboard: any) => getRecentCollections(dashboard).map(normalizeRecentItem);
+
+const extractHistoryItems = (history: any) => {
+    const candidates = [
+        history,
+        history?.data,
+        history?.data?.data,
+        history?.data?.history,
+        history?.data?.items,
+        history?.data?.results,
+        history?.history,
+        history?.items,
+        history?.results,
+        history?.records,
+        history?.list,
+    ];
+
+    return candidates.find(Array.isArray) || [];
+};
+
+export const normalizeHistoryItems = (history: any) => extractHistoryItems(history).map(normalizeRecentItem);
+
+export const mergeDashboardWithHistory = (dashboard: any, history: any) => {
+    const historyItems = normalizeHistoryItems(history);
+    if (!historyItems.length) {
+        return dashboard;
+    }
+
+    const existingItems = getRecentCollections(dashboard);
+    const mergedItems = dedupeRecentItems([...historyItems, ...existingItems]);
+
+    return {
+        ...dashboard,
+        history: historyItems,
+        recentAttempts: Array.isArray(dashboard?.recentAttempts) && dashboard.recentAttempts.length > 0 ? dashboard.recentAttempts : historyItems,
+        recentTests: Array.isArray(dashboard?.recentTests) && dashboard.recentTests.length > 0 ? dashboard.recentTests : historyItems,
+        recentMocks: Array.isArray(dashboard?.recentMocks) && dashboard.recentMocks.length > 0 ? dashboard.recentMocks : historyItems,
+        items: Array.isArray(dashboard?.items) && dashboard.items.length > 0 ? dashboard.items : historyItems,
+        _mergedRecentItems: mergedItems,
+    };
+};
 
 export const getDashboardHeadline = (dashboard: any, items: any[]) =>
     firstDefined(
