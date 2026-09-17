@@ -45,7 +45,7 @@ export const OnboardingScreen = () => {
         const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         await AsyncStorage.setItem('hasSeenOnboarding', 'true');
       } catch (e) {}
-      navigation.replace(ROUTES.LOGIN);
+      navigation.replace(ROUTES.REGISTER);
       return;
     }
     const nextIndex = currentIndex + 1;
@@ -245,7 +245,7 @@ export const OnboardingScreen = () => {
           const AsyncStorage = require('@react-native-async-storage/async-storage').default;
           await AsyncStorage.setItem('hasSeenOnboarding', 'true');
         } catch (e) {}
-        navigation.replace(ROUTES.LOGIN);
+        navigation.replace(ROUTES.REGISTER);
       }}>
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>

@@ -40,7 +40,6 @@ import {
 } from '../../Utils/Helpers/home';
 import { ROUTES } from '../../Navigation/RouteNames';
 import { reset as resetNavigation } from '../../Navigation/NavigationService';
-import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { ProfileSkeleton } from '../../Components/LoadingSkeletons';
 
 type EditableProfile = {
@@ -313,12 +312,9 @@ export const ProfileScreen = ({ navigation }: any) => {
             <StatusBar barStyle="light-content" backgroundColor={Colorpath.Primary} />
 
             {profileSkeletonVisible ? (
-                <>
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                        <ProfileSkeleton />
-                    </ScrollView>
-                    <CategoriesFAB />
-                </>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+                    <ProfileSkeleton />
+                </ScrollView>
             ) : (
                 <>
 
@@ -809,7 +805,6 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </View>
                 </View>
             </Modal>
-            <CategoriesFAB />
                 </>
             )}
         </View>

@@ -54,13 +54,12 @@ export const MOCK_CHALLENGES = [
 ];
 
 export const QUICK_ACTIONS = [
-  { id: '7', title: 'Free Mock Bundle', icon: 'layers', route: 'CourseScreen' },
-  { id: '1', title: 'Rapid Revision', icon: 'flash', route: 'RapidRevisionScreen' },
-  { id: '2', title: 'Question Bank', icon: 'book', route: 'QuestionBankScreen' },
-  { id: '3', title: 'Subject Tests', icon: 'flask', route: 'SubjectTestsScreen' },
+  { id: '7', title: 'Free Mock Bundle', icon: 'layers', route: 'CourseScreen', params: { tab: 'exam', search: 'Free Mock' } },
+  { id: '6', title: 'All Subject Bundle', icon: 'document-text', route: 'CourseScreen', params: { tab: 'subject', search: 'All Subject' } },
+  { id: '8', title: 'RRB NS', icon: 'shield-checkmark', route: 'CourseScreen', params: { tab: 'subject', search: 'RRB Nursing Superintendent' } },
+  { id: '9', title: 'NORCET 12', icon: 'ribbon', route: 'CourseScreen', params: { tab: 'exam', search: 'NORCET' } },
   { id: '4', title: 'Daily Test', icon: 'calendar', route: 'MockTestsScreen' },
-  { id: '5', title: 'Mock Test', icon: 'ribbon', route: 'MockTestsScreen' },
-  { id: '6', title: 'All Subject Bundle', icon: 'document-text', route: 'CourseScreen' },
+  { id: '10', title: 'Pharmacy', icon: 'medical', route: 'CourseScreen', params: { tab: 'subject', search: 'Pharmacy' } },
 ];
 
 export const QUESTION_BANK_CATEGORIES = [

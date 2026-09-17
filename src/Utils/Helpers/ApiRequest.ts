@@ -41,7 +41,7 @@ const getRefreshToken = (response: any) =>
     response?.data?.data?.tokens?.refresh_token ||
     null;
 
-const stripBearer = (token: string) => token.replace(/^Bearer\s+/i, '').trim();
+export const stripBearer = (token?: string | null) => (token || '').replace(/^Bearer\s+/i, '').trim();
 
 const decodeBase64Url = (value: string) => {
     const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -251,7 +251,10 @@ axiosInstance.interceptors.request.use(
             }
 
             if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
+                const cleanToken = stripBearer(token);
+                if (cleanToken) {
+                    config.headers.Authorization = `Bearer ${cleanToken}`;
+                }
             }
         } catch {
             // Ignore
@@ -269,8 +272,9 @@ axiosInstance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config || {};
         const isRefreshRequest = String(originalRequest.url || '').includes('auth/refresh');
+        const isLogoutRequest = String(originalRequest.url || '').includes('auth/logout');
 
-        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest) {
+        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshRequest && !isLogoutRequest) {
             originalRequest._retry = true;
             try {
                 const newAccessToken = await refreshAccessToken();
@@ -278,7 +282,8 @@ axiosInstance.interceptors.response.use(
                     if (!originalRequest.headers) {
                         originalRequest.headers = {};
                     }
-                    originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                    const cleanNewToken = stripBearer(newAccessToken);
+                    originalRequest.headers.Authorization = `Bearer ${cleanNewToken}`;
                     return axiosInstance(originalRequest);
                 }
 
@@ -297,69 +302,68 @@ axiosInstance.interceptors.response.use(
     }
 );
 
+export { axiosInstance };
+
 export async function getApi(url: string, header: any = {}) {
+    const cleanAuth = header.authorization ? stripBearer(header.authorization) : '';
     const reqHeaders: any = {
         Accept: header.Accept || 'application/json',
         'Content-Type': header.contenttype || 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Pragma: 'no-cache',
         Expires: '0',
-        ...(header.authorization ? { Authorization: `Bearer ${header.authorization}` } : {}),
+        ...(cleanAuth ? { Authorization: `Bearer ${cleanAuth}` } : {}),
     };
     const normalizedUrl = normalizeUrl(url);
-
-    console.log(`[GET] Requesting URL: ${constants.BASE_URL}/${normalizedUrl}`);
 
     return axiosInstance.get(normalizedUrl, { headers: reqHeaders });
 }
 
 export async function postApi(url: string, payload: any, header: any = {}) {
+    const cleanAuth = header.authorization ? stripBearer(header.authorization) : '';
     const reqHeaders: any = {
         Accept: header.Accept || 'application/json',
         'Content-Type': header.contenttype || 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Pragma: 'no-cache',
         Expires: '0',
-        ...(header.authorization ? { Authorization: `Bearer ${header.authorization}` } : {}),
+        ...(cleanAuth ? { Authorization: `Bearer ${cleanAuth}` } : {}),
         ...(header.IPADDRESS ? { IPADDRESS: header.IPADDRESS } : {}),
     };
     const normalizedUrl = normalizeUrl(url);
-
-    console.log(`[POST] Requesting URL: ${constants.BASE_URL}/${normalizedUrl}`, reqHeaders);
 
     return axiosInstance.post(normalizedUrl, payload, { headers: reqHeaders });
 }
 
 export async function patchApi(url: string, payload: any, header: any = {}) {
+    const cleanAuth = header.authorization ? stripBearer(header.authorization) : '';
     const reqHeaders: any = {
         Accept: header.Accept || 'application/json',
         'Content-Type': header.contenttype || 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Pragma: 'no-cache',
         Expires: '0',
-        ...(header.authorization ? { Authorization: `Bearer ${header.authorization}` } : {}),
+        ...(cleanAuth ? { Authorization: `Bearer ${cleanAuth}` } : {}),
         ...(header.IPADDRESS ? { IPADDRESS: header.IPADDRESS } : {}),
     };
     const normalizedUrl = normalizeUrl(url);
-
-    console.log(`[PATCH] Requesting URL: ${constants.BASE_URL}/${normalizedUrl}`, reqHeaders);
 
     return axiosInstance.patch(normalizedUrl, payload, { headers: reqHeaders });
 }
 
 export async function deleteApi(url: string, payload?: any, header: any = {}) {
+    const cleanAuth = header.authorization ? stripBearer(header.authorization) : '';
     const reqHeaders: any = {
         Accept: header.Accept || 'application/json',
         'Content-Type': header.contenttype || 'application/json',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         Pragma: 'no-cache',
         Expires: '0',
-        ...(header.authorization ? { Authorization: `Bearer ${header.authorization}` } : {}),
+        ...(cleanAuth ? { Authorization: `Bearer ${cleanAuth}` } : {}),
         ...(header.IPADDRESS ? { IPADDRESS: header.IPADDRESS } : {}),
     };
     const normalizedUrl = normalizeUrl(url);
 
-    console.log(`[DELETE] Requesting URL: ${constants.BASE_URL}/${normalizedUrl}`, reqHeaders);
-
     return axiosInstance.delete(normalizedUrl, { headers: reqHeaders, data: payload });
 }
+

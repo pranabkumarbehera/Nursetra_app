@@ -39,6 +39,12 @@ import {
     documentRequest,
     documentSuccess,
     documentFailure,
+    leaderboardRequest,
+    leaderboardSuccess,
+    leaderboardFailure,
+    quizLeaderboardRequest,
+    quizLeaderboardSuccess,
+    quizLeaderboardFailure,
 } from '../Reducers/MockTestReducer';
 import { getApi, postApi } from '../../Utils/Helpers/ApiRequest';
 import Toast from 'react-native-toast-message';
@@ -433,6 +439,49 @@ export function* documentSaga(action: any): Generator<any, void, any> {
     }
 }
 
+export function* leaderboardSaga(_action: any): Generator<any, void, any> {
+    const auth = yield select(getAuth);
+    const header = {
+        Accept: 'application/json',
+        contenttype: 'application/json',
+        authorization: auth.token,
+    };
+    try {
+        const response = yield call(getApi, 'leaderboard/my-quizzes', header);
+        if (response?.data?.success === true || response?.status === 200) {
+            yield put(leaderboardSuccess(response?.data?.data || response?.data));
+        } else {
+            yield put(leaderboardFailure(response?.data));
+            Toast.show({ type: 'error', text1: response?.data?.message || 'Failed to fetch leaderboard' });
+        }
+    } catch (error: any) {
+        yield put(leaderboardFailure(error?.response?.data?.message || error?.message || 'Failed to load leaderboard'));
+        Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to fetch leaderboard' });
+    }
+}
+
+export function* quizLeaderboardSaga(action: any): Generator<any, void, any> {
+    const auth = yield select(getAuth);
+    const header = {
+        Accept: 'application/json',
+        contenttype: 'application/json',
+        authorization: auth.token,
+    };
+    try {
+        const quizId = action.payload?.quizId || action.payload;
+        const response = yield call(getApi, `leaderboard/quiz/${quizId}?page=1&limit=50`, header);
+        if (response?.data?.success === true || response?.status === 200) {
+            yield put(quizLeaderboardSuccess(response?.data?.data || response?.data));
+        } else {
+            yield put(quizLeaderboardFailure(response?.data));
+            Toast.show({ type: 'error', text1: response?.data?.message || 'Failed to fetch quiz leaderboard' });
+        }
+    } catch (error: any) {
+        yield put(quizLeaderboardFailure(error?.response?.data?.message || error?.message || 'Failed to load quiz leaderboard'));
+        Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to fetch quiz leaderboard' });
+    }
+}
+
 const MockTestSaga = [
     takeLatest(getMockTestListRequest.type, getMockTestListSaga),
     takeLatest(getBundleListRequest.type, getBundleListSaga),
@@ -447,6 +496,8 @@ const MockTestSaga = [
     takeLatest(submitTestRequest.type, submitTestSaga),
     takeLatest(getTestResultRequest.type, getTestResultSaga),
     takeLatest(documentRequest.type, documentSaga),
+    takeLatest(leaderboardRequest.type, leaderboardSaga),
+    takeLatest(quizLeaderboardRequest.type, quizLeaderboardSaga),
 ];
 
 export default MockTestSaga;

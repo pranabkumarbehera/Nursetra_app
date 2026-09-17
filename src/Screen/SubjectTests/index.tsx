@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, StatusBar, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Colorpath from '../../Themes/Colorpath';
 import { normalize, verticalScale } from '../../Utils/Helpers/normalize';
 import { useDispatch, useSelector } from 'react-redux';
-import { getMockTestListRequest, getStudentModulesRequest } from '../../Redux/Reducers/MockTestReducer';
+import { getMockTestListRequest, getBundleListRequest, getStudentModulesRequest } from '../../Redux/Reducers/MockTestReducer';
 import { RootState } from '../../Redux/Store';
 import { paymentHistoryRequest } from '../../Redux/Reducers/ProfileReducer';
 import { useIsFocused, useRoute } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import LinearGradient from 'react-native-linear-gradient';
 import { ROUTES } from '../../Navigation/RouteNames';
-import { getApi } from '../../Utils/Helpers/ApiRequest';
-import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { MockBankSkeleton } from '../../Components/LoadingSkeletons';
 import { NURSING_ACCESS_DURATION_LABEL, NURSING_ACCESS_EXPIRY_LABEL, getNursingSubjectName, sortNursingSubjects } from '../../Utils/Constants/Subjects';
+import { hasValidDuration, getValidityRange } from '../CoursesScreen/utils/courseHelpers';
+import { getApi } from '../../Utils/Helpers/ApiRequest';
 
 const getSubjectTheme = (subjectName: string) => {
     const s = subjectName.toLowerCase();
@@ -43,6 +43,10 @@ const extractItems = (source: any): any[] => {
     }
 
     return (
+        source?.data?.subModules ||
+        source?.subModules ||
+        source?.data?.subCategories ||
+        source?.subCategories ||
         source?.data?.modules ||
         source?.modules ||
         source?.data?.items ||
@@ -186,7 +190,10 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
             } catch (error: any) {
                 if (active) {
                     setSubCategories([]);
-                    Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to fetch sub-categories' });
+                    // Only display toast if it's an actual network/HTTP error status >= 400
+                    if (error?.response?.status && error.response.status >= 400) {
+                        Toast.show({ type: 'error', text1: error?.response?.data?.message || 'Failed to fetch sub-categories' });
+                    }
                 }
             } finally {
                 if (active) {
@@ -202,14 +209,57 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         };
     }, [authToken, selectedCategoryId]);
 
+    const [page, setPage] = useState(1);
+    const limit = 12;
+
+    const handleCategorySelect = (categoryLabel: string, categoryId: string | null) => {
+        setSelectedCategory(categoryLabel);
+        setSelectedCategoryId(categoryId);
+        setSelectedSubCategory('All Sub Categories');
+        setSelectedSubCategoryId(null);
+        setPage(1);
+    };
+
+    const loadingMoreRef = useRef(false);
+
     useEffect(() => {
-        const params: any = {};
-        if (selectedCategoryId) params.moduleId = selectedCategoryId;
-        if (selectedSubCategoryId) params.subModuleId = selectedSubCategoryId;
-        if (debouncedSearch) params.search = debouncedSearch;
+        if (!isLoading) {
+            loadingMoreRef.current = false;
+        }
+    }, [isLoading]);
+
+    const handleLoadMore = () => {
+        if (!isLoading && !loadingMoreRef.current) {
+            loadingMoreRef.current = true;
+            setPage(prev => prev + 1);
+        }
+    };
+
+    useEffect(() => {
+        if (!isFocused) {
+            setAccumulatedMocks([]);
+            setPage(1);
+        }
+    }, [isFocused]);
+
+    useEffect(() => {
+        const params: any = {
+            page: String(page),
+            limit: String(limit),
+        };
+        if (selectedCategoryId) {
+            params.categoryId = selectedCategoryId;
+        }
+        if (selectedSubCategoryId) {
+            params.subModuleId = selectedSubCategoryId;
+        }
+        if (debouncedSearch) {
+            params.search = debouncedSearch;
+        }
 
         dispatch(getMockTestListRequest(params));
-    }, [dispatch, selectedCategoryId, selectedSubCategoryId, debouncedSearch]);
+        dispatch(getBundleListRequest(params));
+    }, [dispatch, selectedCategoryId, selectedSubCategoryId, debouncedSearch, page]);
 
     const { enrolledBundleIds } = useMemo(() => {
         const collectedIds = studentModules?.data?.modules || studentModules?.modules || studentModules?.data || (Array.isArray(studentModules) ? studentModules : []);
@@ -265,9 +315,32 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         };
     }, [studentModules, paymentHistoryData]);
 
-    const rawData = Array.isArray(mockTestList)
-        ? mockTestList
-        : mockTestList?.data || mockTestList?.quizzes || mockTestList?.items || [];
+    const [accumulatedMocks, setAccumulatedMocks] = useState<any[]>([]);
+
+    useEffect(() => {
+        setAccumulatedMocks([]);
+    }, [selectedCategoryId, selectedSubCategoryId, debouncedSearch]);
+
+    useEffect(() => {
+        const rawList = Array.isArray(mockTestList)
+            ? mockTestList
+            : mockTestList?.data || mockTestList?.quizzes || mockTestList?.items || [];
+        if (Array.isArray(rawList) && rawList.length > 0) {
+            if (page === 1) {
+                setAccumulatedMocks(rawList);
+            } else {
+                setAccumulatedMocks(prev => {
+                    const existingIds = new Set(prev.map(i => i?.id || i?._id));
+                    const newItems = rawList.filter(i => !existingIds.has(i?.id || i?._id));
+                    return [...prev, ...newItems];
+                });
+            }
+        }
+    }, [mockTestList, page]);
+
+    const rawData = accumulatedMocks.length > 0
+        ? accumulatedMocks
+        : (Array.isArray(mockTestList) ? mockTestList : mockTestList?.data || mockTestList?.quizzes || mockTestList?.items || []);
 
     const displayData = rawData.map((mock: any) => {
         const correctMarks = mock?.positiveMarks ?? mock?.correctMarks ?? mock?.defaultMarks ?? mock?.marksPerQuestion ?? mock?.quiz?.positiveMarks ?? mock?.quiz?.defaultMarks ?? mock?.quiz?.marksPerQuestion ?? 1;
@@ -322,7 +395,7 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         };
     });
     const filteredData = displayData;
-
+    console.log('fdd', filteredData)
     const handleStartTest = (mock: any) => {
         if (mock.type === 'premium' && !mock.isUnlocked) {
             setSelectedMock(mock);
@@ -332,10 +405,10 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
         }
     };
 
-    const showLoadingSkeleton = isLoading || loadingCategories || loadingSubCategories || paymentHistoryLoading;
+    const showLoadingSkeleton = (isLoading && page === 1 && accumulatedMocks.length === 0) || loadingCategories || loadingSubCategories || paymentHistoryLoading;
 
     return (
-    <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]} edges={['top', 'left', 'right']}>
+        <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 12) }]} edges={['top', 'left', 'right']}>
             <StatusBar backgroundColor="#FAFBFF" barStyle="dark-content" />
 
             <View style={styles.header}>
@@ -347,208 +420,236 @@ export const SubjectTestsScreen = ({ navigation }: MockBankScreenProps) => {
             {showLoadingSkeleton ? (
                 <MockBankSkeleton />
             ) : (
-            <ScrollView ref={scrollRef} contentContainerStyle={[styles.scrollContent, { paddingBottom: verticalScale(112) + insets.bottom }]} showsVerticalScrollIndicator={false}>
-                <Text style={styles.sectionSubtitle}>Practice with real exam scenarios.</Text>
+                <ScrollView
+                    ref={scrollRef}
+                    contentContainerStyle={[styles.scrollContent, { paddingBottom: verticalScale(112) + insets.bottom }]}
+                    showsVerticalScrollIndicator={false}
+                    onScroll={({ nativeEvent }) => {
+                        const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                        const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 250;
+                        if (isCloseToBottom) {
+                            handleLoadMore();
+                        }
+                    }}
+                    scrollEventThrottle={16}
+                >
+                    <Text style={styles.sectionSubtitle}>Practice with real exam scenarios.</Text>
 
-                {/* Search Bar */}
-                <View style={styles.searchBarContainer}>
-                    <Icon name="search" size={normalize(18)} color="#9CA3AF" style={styles.searchIcon} />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search tests..."
-                        placeholderTextColor="#9CA3AF"
-                        value={searchInput}
-                        onChangeText={setSearchInput}
-                    />
-                    {searchInput.length > 0 && (
-                        <Pressable onPress={() => setSearchInput('')}>
-                            <Icon name="x" size={normalize(18)} color="#9CA3AF" />
-                        </Pressable>
-                    )}
-                </View>
-
-                {/* Categories Filter */}
-                <View style={styles.filterSection}>
-                    <Text style={styles.filterLabel}>Categories</Text>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalScrollStyle}
-                    >
-                        <Pressable
-                            style={[
-                                styles.filterPill,
-                                selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillActive,
-                            ]}
-                            onPress={() => {
-                                setSelectedCategory('All Categories');
-                                setSelectedCategoryId(null);
-                                setSelectedSubCategory('All Sub Categories');
-                                setSelectedSubCategoryId(null);
-                                setSubCategories([]);
-                            }}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterPillText,
-                                    selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillTextActive,
-                                ]}
-                            >
-                                All Categories
-                            </Text>
-                        </Pressable>
-                        {categories.map((category: any) => {
-                            const isSelected =
-                                String(selectedCategoryId) === String(category.id) ||
-                                selectedCategory === category.label;
-                            return (
-                                <Pressable
-                                    key={category.id}
-                                    style={[
-                                        styles.filterPill,
-                                        isSelected && styles.filterPillActive,
-                                    ]}
-                                    onPress={() => {
-                                        setSelectedCategory(category.label);
-                                        setSelectedCategoryId(String(category.id));
-                                        setSelectedSubCategory('All Sub Categories');
-                                        setSelectedSubCategoryId(null);
-                                    }}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.filterPillText,
-                                            isSelected && styles.filterPillTextActive,
-                                        ]}
-                                    >
-                                        {category.label}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-                    </ScrollView>
-                </View>
-
-                {/* Sub Categories Filter */}
-                <View style={styles.filterSection}>
-                    <Text style={styles.filterLabel}>Sub Categories</Text>
-                    <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        contentContainerStyle={styles.horizontalScrollStyle}
-                    >
-                        <Pressable
-                            style={[
-                                styles.filterPill,
-                                selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillActive,
-                            ]}
-                            onPress={() => setSelectedSubCategory('All Sub Categories')}
-                        >
-                            <Text
-                                style={[
-                                    styles.filterPillText,
-                                    selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillTextActive,
-                                ]}
-                            >
-                                All Sub Categories
-                            </Text>
-                        </Pressable>
-                        {subCategories.map((subCategory: any) => {
-                            const isSelected =
-                                String(selectedSubCategoryId) === String(subCategory.id) ||
-                                selectedSubCategory === subCategory.label;
-                            return (
-                                <Pressable
-                                    key={subCategory.id}
-                                    style={[
-                                        styles.filterPill,
-                                        isSelected && styles.filterPillActive,
-                                    ]}
-                                    onPress={() => {
-                                        setSelectedSubCategory(subCategory.label);
-                                        setSelectedSubCategoryId(String(subCategory.id));
-                                    }}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.filterPillText,
-                                            isSelected && styles.filterPillTextActive,
-                                        ]}
-                                    >
-                                        {subCategory.label}
-                                    </Text>
-                                </Pressable>
-                            );
-                        })}
-                    </ScrollView>
-                </View>
-
-                {filteredData.length === 0 ? (
-                    <View style={styles.centerLoadingState}>
-                        <Text style={styles.loadingStateText}>No tests available right now.</Text>
+                    {/* Search Bar */}
+                    <View style={styles.searchBarContainer}>
+                        <Icon name="search" size={normalize(18)} color="#9CA3AF" style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search tests..."
+                            placeholderTextColor="#9CA3AF"
+                            value={searchInput}
+                            onChangeText={setSearchInput}
+                        />
+                        {searchInput.length > 0 && (
+                            <Pressable onPress={() => setSearchInput('')}>
+                                <Icon name="x" size={normalize(18)} color="#9CA3AF" />
+                            </Pressable>
+                        )}
                     </View>
-                ) : filteredData.map((mock: any, i: number) => {
-                    const theme = getSubjectTheme(mock.subjects);
-                    return (
-                        <Pressable key={i} style={styles.testCard} onPress={() => handleStartTest(mock)}>
-                            <View style={styles.cardHeader}>
-                                <View style={styles.cardHeaderLeft}>
-                                    <LinearGradient
-                                        colors={theme.colors}
-                                        style={styles.iconContainer}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 1 }}
+
+                    {/* Categories Filter */}
+                    <View style={styles.filterSection}>
+                        <Text style={styles.filterLabel}>Categories</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalScrollStyle}
+                        >
+                            <Pressable
+                                style={[
+                                    styles.filterPill,
+                                    selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillActive,
+                                ]}
+                                onPress={() => {
+                                    handleCategorySelect('All Categories', null);
+                                    setSubCategories([]);
+                                }}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterPillText,
+                                        selectedCategoryId === null && selectedCategory === 'All Categories' && styles.filterPillTextActive,
+                                    ]}
+                                >
+                                    All Categories
+                                </Text>
+                            </Pressable>
+                            {categories.map((category: any) => {
+                                const isSelected =
+                                    String(selectedCategoryId) === String(category.id) ||
+                                    selectedCategory === category.label;
+                                return (
+                                    <Pressable
+                                        key={category.id}
+                                        style={[
+                                            styles.filterPill,
+                                            isSelected && styles.filterPillActive,
+                                        ]}
+                                        onPress={() => {
+                                            handleCategorySelect(category.label, String(category.id));
+                                        }}
                                     >
-                                        <Icon name={theme.icon} size={normalize(16)} color="#FFFFFF" />
-                                    </LinearGradient>
-                                    <Text style={styles.mainSubjectText} numberOfLines={1}>{mock.subjects}</Text>
-                                </View>
-                                <View style={styles.cardHeaderRight}>
-                                    <Text style={styles.testSeriesText}>Test Series</Text>
-                                    {mock.type === 'premium' && !mock.isUnlocked ? (
-                                        <FontAwesome5 name="lock" size={normalize(12)} color="#9CA3AF" style={{ marginHorizontal: normalize(6) }} />
-                                    ) : null}
-                                    <Icon name="chevron-right" size={normalize(20)} color={theme.colors[1]} />
-                                </View>
-                            </View>
+                                        <Text
+                                            style={[
+                                                styles.filterPillText,
+                                                isSelected && styles.filterPillTextActive,
+                                            ]}
+                                        >
+                                            {category.label}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
 
-                            <View style={styles.cardDivider} />
+                    {/* Sub Categories Filter */}
+                    <View style={styles.filterSection}>
+                        <Text style={styles.filterLabel}>Sub Categories</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.horizontalScrollStyle}
+                        >
+                            <Pressable
+                                style={[
+                                    styles.filterPill,
+                                    selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillActive,
+                                ]}
+                                onPress={() => {
+                                    setSelectedSubCategory('All Sub Categories');
+                                    setSelectedSubCategoryId(null);
+                                    setPage(1);
+                                }}
+                            >
+                                <Text
+                                    style={[
+                                        styles.filterPillText,
+                                        selectedSubCategoryId === null && selectedSubCategory === 'All Sub Categories' && styles.filterPillTextActive,
+                                    ]}
+                                >
+                                    All Sub Categories
+                                </Text>
+                            </Pressable>
+                            {subCategories.map((subCategory: any) => {
+                                const isSelected =
+                                    String(selectedSubCategoryId) === String(subCategory.id) ||
+                                    selectedSubCategory === subCategory.label;
+                                return (
+                                    <Pressable
+                                        key={subCategory.id}
+                                        style={[
+                                            styles.filterPill,
+                                            isSelected && styles.filterPillActive,
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedSubCategory(subCategory.label);
+                                            setSelectedSubCategoryId(String(subCategory.id));
+                                            setPage(1);
+                                        }}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.filterPillText,
+                                                isSelected && styles.filterPillTextActive,
+                                            ]}
+                                        >
+                                            {subCategory.label}
+                                        </Text>
+                                    </Pressable>
+                                );
+                            })}
+                        </ScrollView>
+                    </View>
 
-                            <Text style={styles.testTitle}>{mock.title}</Text>
-
-                            <View style={styles.cardMetaGrid}>
-                                <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Test Topic</Text>
-                                    <Text style={styles.cardMetaValue} numberOfLines={1}>{mock.title}</Text>
-                                </View>
-                                <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Full mark</Text>
-                                    <Text style={styles.cardMetaValue}>{mock.fullMarks}</Text>
-                                </View>
-                                <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Time Duration</Text>
-                                    <Text style={styles.cardMetaValue}>{ACCESS_DURATION_LABEL}</Text>
-                                </View>
-                                <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Expiry</Text>
-                                    <View style={styles.cardMetaExpiryRow}>
-                                        <Icon name="x" size={normalize(12)} color="#DC2626" />
-                                        <Text style={styles.cardMetaExpiryText}>{ACCESS_EXPIRY_LABEL}</Text>
+                    {filteredData.length === 0 ? (
+                        <View style={styles.centerLoadingState}>
+                            <Text style={styles.loadingStateText}>No tests available right now.</Text>
+                        </View>
+                    ) : filteredData.map((mock: any, i: number) => {
+                        const theme = getSubjectTheme(mock.subjects);
+                        return (
+                            <Pressable key={i} style={styles.testCard} onPress={() => handleStartTest(mock)}>
+                                <View style={styles.cardHeader}>
+                                    <View style={styles.cardHeaderLeft}>
+                                        <LinearGradient
+                                            colors={theme.colors}
+                                            style={styles.iconContainer}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        >
+                                            <Icon name={theme.icon} size={normalize(16)} color="#FFFFFF" />
+                                        </LinearGradient>
+                                        <Text style={styles.mainSubjectText} numberOfLines={1}>{mock.subjects}</Text>
+                                    </View>
+                                    <View style={styles.cardHeaderRight}>
+                                        <Text style={styles.testSeriesText}>Test Series</Text>
+                                        {mock.type === 'premium' && !mock.isUnlocked ? (
+                                            <FontAwesome5 name="lock" size={normalize(12)} color="#9CA3AF" style={{ marginHorizontal: normalize(6) }} />
+                                        ) : null}
+                                        <Icon name="chevron-right" size={normalize(20)} color={theme.colors[1]} />
                                     </View>
                                 </View>
-                                <View style={styles.cardMetaItem}>
-                                    <Text style={styles.cardMetaLabel}>Negative marking</Text>
-                                    <Text style={styles.cardMetaValue}>{mock.negativeMarking}</Text>
-                                </View>
-                            </View>
-                        </Pressable>
-                    );
-                })}
 
-                <View style={{ height: verticalScale(28) }} />
-            </ScrollView>
+                                <View style={styles.cardDivider} />
+
+                                <Text style={styles.testTitle}>{mock.title}</Text>
+
+                                <View style={styles.cardMetaGrid}>
+                                    <View style={styles.cardMetaItem}>
+                                        <Text style={styles.cardMetaLabel}>Test Topic</Text>
+                                        <Text style={styles.cardMetaValue} numberOfLines={1}>{mock.title}</Text>
+                                    </View>
+                                    <View style={styles.cardMetaItem}>
+                                        <Text style={styles.cardMetaLabel}>Full mark</Text>
+                                        <Text style={styles.cardMetaValue}>{mock.fullMarks}</Text>
+                                    </View>
+                                    {mock?.originalData?.durationValue ? (
+                                        <View style={styles.cardMetaItem}>
+                                            <Text style={styles.cardMetaLabel}>Time Duration</Text>
+                                            <Text style={styles.cardMetaValue}>
+                                                {`${mock.originalData.durationValue} ${mock?.originalData?.durationUnit || 'Month'}`}
+                                            </Text>
+                                        </View>
+                                    ) : null}
+                                    {(() => {
+                                        const validity = getValidityRange(mock);
+                                        if (!validity) return null;
+                                        return (
+                                            <View style={styles.cardMetaItem}>
+                                                <Text style={styles.cardMetaLabel}>Validity</Text>
+                                                <View style={styles.cardMetaExpiryRow}>
+                                                    <Icon name="clock" size={normalize(12)} color="#0F766E" />
+                                                    <Text style={[styles.cardMetaExpiryText, { color: '#0F766E' }]}>
+                                                        {validity.formatted}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                        );
+                                    })()}
+                                    <View style={styles.cardMetaItem}>
+                                        <Text style={styles.cardMetaLabel}>Negative marking</Text>
+                                        <Text style={styles.cardMetaValue}>{mock.negativeMarking}</Text>
+                                    </View>
+                                </View>
+                            </Pressable>
+                        );
+                    })}
+
+                    {isLoading && page > 1 && (
+                        <View style={{ paddingVertical: verticalScale(16), alignItems: 'center', justifyContent: 'center' }}>
+                            <ActivityIndicator size="small" color={Colorpath.Primary} />
+                        </View>
+                    )}
+
+                    <View style={{ height: verticalScale(28) }} />
+                </ScrollView>
             )}
-            <CategoriesFAB />
 
             <Modal visible={showPaymentModal} animationType="slide" transparent={true}>
                 <View style={styles.modalOverlay}>

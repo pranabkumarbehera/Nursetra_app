@@ -85,7 +85,7 @@ export const RegisterScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View style={styles.headerContainer}>
         <View style={styles.headerTextWrap}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.8}>
+          <TouchableOpacity onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.navigate(ROUTES.LOGIN))} style={styles.backButton} activeOpacity={0.8}>
             <Icon name="arrow-back" size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={styles.welcomeText}>Create Account</Text>
@@ -135,7 +135,7 @@ export const RegisterScreen = () => {
         </ScrollView>
 
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.footerWrap} activeOpacity={0.8} onPress={() => navigation.goBack()}>
+          <TouchableOpacity style={styles.footerWrap} activeOpacity={0.8} onPress={() => navigation.navigate(ROUTES.LOGIN)}>
             <Text style={styles.footerText}>Already have an account? </Text>
             <Text style={styles.footerAction}>Sign In</Text>
           </TouchableOpacity>

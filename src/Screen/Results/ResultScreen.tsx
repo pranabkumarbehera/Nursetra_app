@@ -23,153 +23,153 @@ const CARD_GREEN_GRADIENT = ['rgba(220,252,231,0.95)', 'rgba(191,219,254,0.55)']
 const REVIEW_BORDER = 'rgba(11, 95, 168, 0.12)';
 
 const getAttemptId = (data: any) =>
-    data?.data?._id || data?.data?.attemptId || data?.attemptId || data?.attempt?.id || data?.attempt?._id || data?.id || data?._id || null;
+  data?.data?._id || data?.data?.attemptId || data?.attemptId || data?.attempt?.id || data?.attempt?._id || data?.id || data?._id || null;
 
 const normalizeOption = (option: any, index: number) => {
-    if (typeof option === 'string') return { key: `${index}-${option}`, text: option, value: option };
-    return {
-        key: option?._id || option?.id || option?.value || option?.text || `${index}`,
-        text: option?.text || option?.value || option?.label || `Option ${index + 1}`,
-        value: option?.value || option?.text || option?._id || option?.id || '',
-        isCorrect: option?.isCorrect,
-    };
+  if (typeof option === 'string') return { key: `${index}-${option}`, text: option, value: option };
+  return {
+    key: option?._id || option?.id || option?.value || option?.text || `${index}`,
+    text: option?.text || option?.value || option?.label || `Option ${index + 1}`,
+    value: option?.value || option?.text || option?._id || option?.id || '',
+    isCorrect: option?.isCorrect,
+  };
 };
 
 const isOptionMatch = (option: any, target: any) => {
-    if (target === undefined || target === null || target === '') return false;
-    return [option?.key, option?.value, option?.text, option?.id, option?._id].some(value => value !== undefined && value !== null && String(value) === String(target));
+  if (target === undefined || target === null || target === '') return false;
+  return [option?.key, option?.value, option?.text, option?.id, option?._id].some(value => value !== undefined && value !== null && String(value) === String(target));
 };
 
 const hasUserAnswered = (item: any) => {
-    const rawAnswer = item?.userAnswer ?? item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.studentAnswer ?? item?.answer;
-    if (Array.isArray(rawAnswer)) return rawAnswer.length > 0;
-    if (typeof rawAnswer === 'string') return rawAnswer.trim() !== '';
-    return rawAnswer !== undefined && rawAnswer !== null && rawAnswer !== '';
+  const rawAnswer = item?.userAnswer ?? item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.studentAnswer ?? item?.answer;
+  if (Array.isArray(rawAnswer)) return rawAnswer.length > 0;
+  if (typeof rawAnswer === 'string') return rawAnswer.trim() !== '';
+  return rawAnswer !== undefined && rawAnswer !== null && rawAnswer !== '';
 };
 
 const getReviewItems = (resultData: any) => {
-    const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
-    if (!Array.isArray(rawItems)) return [];
+  const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
+  if (!Array.isArray(rawItems)) return [];
 
-    return rawItems.map((item: any, index: number) => {
-        const question = item?.question || item?.questionId || item;
-        const rawOptions = question?.options || question?.choices || item?.options || [];
-        const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, idx: number) => normalizeOption(opt, idx)) : [];
-        const explanation =
-            item?.explanation ||
-            item?.answerExplanation ||
-            item?.answer_explanation ||
-            item?.solutionExplanation ||
-            item?.solution ||
-            question?.explanation ||
-            question?.answerExplanation ||
-            question?.answer_explanation ||
-            question?.solutionExplanation ||
-            question?.solution ||
-            resultData?.explanation ||
-            resultData?.answerExplanation ||
-            resultData?.answer_explanation ||
-            '';
+  return rawItems.map((item: any, index: number) => {
+    const question = item?.question || item?.questionId || item;
+    const rawOptions = question?.options || question?.choices || item?.options || [];
+    const options = Array.isArray(rawOptions) ? rawOptions.map((opt: any, idx: number) => normalizeOption(opt, idx)) : [];
+    const explanation =
+      item?.explanation ||
+      item?.answerExplanation ||
+      item?.answer_explanation ||
+      item?.solutionExplanation ||
+      item?.solution ||
+      question?.explanation ||
+      question?.answerExplanation ||
+      question?.answer_explanation ||
+      question?.solutionExplanation ||
+      question?.solution ||
+      resultData?.explanation ||
+      resultData?.answerExplanation ||
+      resultData?.answer_explanation ||
+      '';
 
-        const selectedRaw = item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.userAnswer ?? item?.studentAnswer ?? item?.answer ?? null;
-        const selectedIndex = item?.selectedAnswer?.index ?? item?.selectedIndex ?? item?.userAnswerIndex ?? null;
-        const correctRaw = item?.correctAnswer?.value ?? item?.correctAnswer?.text ?? item?.correctAnswer ?? question?.correctAnswer?.value ?? question?.correctAnswer?.text ?? question?.correctAnswer ?? null;
+    const selectedRaw = item?.selectedAnswer?.value ?? item?.selectedAnswer?.text ?? item?.selectedAnswer ?? item?.userAnswer ?? item?.studentAnswer ?? item?.answer ?? null;
+    const selectedIndex = item?.selectedAnswer?.index ?? item?.selectedIndex ?? item?.userAnswerIndex ?? null;
+    const correctRaw = item?.correctAnswer?.value ?? item?.correctAnswer?.text ?? item?.correctAnswer ?? question?.correctAnswer?.value ?? question?.correctAnswer?.text ?? question?.correctAnswer ?? null;
 
-        const safeSelectedLabel = typeof selectedRaw === 'object' && selectedRaw !== null ? selectedRaw.value || selectedRaw.text || selectedRaw.label || JSON.stringify(selectedRaw) : selectedRaw;
-        const safeCorrectLabel = typeof correctRaw === 'object' && correctRaw !== null ? correctRaw.value || correctRaw.text || correctRaw.label || JSON.stringify(correctRaw) : correctRaw;
+    const safeSelectedLabel = typeof selectedRaw === 'object' && selectedRaw !== null ? selectedRaw.value || selectedRaw.text || selectedRaw.label || JSON.stringify(selectedRaw) : selectedRaw;
+    const safeCorrectLabel = typeof correctRaw === 'object' && correctRaw !== null ? correctRaw.value || correctRaw.text || correctRaw.label || JSON.stringify(correctRaw) : correctRaw;
 
-        const resolvedCorrectIndex = options.findIndex(option => option?.isCorrect === true || isOptionMatch(option, correctRaw));
-        const resolvedSelectedIndex = selectedIndex !== null && selectedIndex !== undefined ? Number(selectedIndex) : options.findIndex(option => isOptionMatch(option, selectedRaw));
+    const resolvedCorrectIndex = options.findIndex(option => option?.isCorrect === true || isOptionMatch(option, correctRaw));
+    const resolvedSelectedIndex = selectedIndex !== null && selectedIndex !== undefined ? Number(selectedIndex) : options.findIndex(option => isOptionMatch(option, selectedRaw));
 
-        const isAnswered = hasUserAnswered(item);
-        let status = 'skipped';
-        if (isAnswered) {
-            status = (item?.isCorrect === true || (resolvedCorrectIndex >= 0 && resolvedSelectedIndex === resolvedCorrectIndex)) ? 'correct' : 'incorrect';
-        }
+    const isAnswered = hasUserAnswered(item);
+    let status = 'skipped';
+    if (isAnswered) {
+      status = (item?.isCorrect === true || (resolvedCorrectIndex >= 0 && resolvedSelectedIndex === resolvedCorrectIndex)) ? 'correct' : 'incorrect';
+    }
 
-        return {
-            id: item?._id || question?._id || question?.id || `${index}`,
-            questionNumber: index + 1,
-            questionText: question?.text || question?.question || question?.questionText || item?.questionText || 'Question',
-            options,
-            marksAwarded: item?.marksAwarded ?? 0,
-            questionMarks: question?.marks ?? 0,
-            correctAnswerLabel: safeCorrectLabel,
-            userAnswerLabel: safeSelectedLabel,
-            selectedIndex: resolvedSelectedIndex >= 0 ? resolvedSelectedIndex : null,
-            correctIndex: resolvedCorrectIndex >= 0 ? resolvedCorrectIndex : null,
-            status,
-            explanation,
-        };
-    });
+    return {
+      id: item?._id || question?._id || question?.id || `${index}`,
+      questionNumber: index + 1,
+      questionText: question?.text || question?.question || question?.questionText || item?.questionText || 'Question',
+      options,
+      marksAwarded: item?.marksAwarded ?? 0,
+      questionMarks: question?.marks ?? 0,
+      correctAnswerLabel: safeCorrectLabel,
+      userAnswerLabel: safeSelectedLabel,
+      selectedIndex: resolvedSelectedIndex >= 0 ? resolvedSelectedIndex : null,
+      correctIndex: resolvedCorrectIndex >= 0 ? resolvedCorrectIndex : null,
+      status,
+      explanation,
+    };
+  });
 };
 
 const getRawResultItems = (resultData: any) => {
-    const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
-    return Array.isArray(rawItems) ? rawItems : [];
+  const rawItems = resultData?.results || resultData?.review || resultData?.questions || resultData?.attempt?.questions || resultData?.answers || resultData?.result || [];
+  return Array.isArray(rawItems) ? rawItems : [];
 };
 
 export const ResultScreen = () => {
-    const insets = useSafeAreaInsets();
-    const navigation = useNavigation<any>();
-    const route = useRoute<any>();
-    const dispatch = useDispatch();
-    const { testResult, isLoading, submitTestResponse, startTestResponse } = useSelector((state: RootState) => state.MockTestReducer);
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const dispatch = useDispatch();
+  const { testResult, isLoading, submitTestResponse, startTestResponse } = useSelector((state: RootState) => state.MockTestReducer);
 
-    const attemptId = route.params?.attemptId || getAttemptId(submitTestResponse) || getAttemptId(startTestResponse);
-    const routeResultData = route.params?.resultData;
-    const resultData = useMemo(() => routeResultData || testResult?.data || testResult || {}, [routeResultData, testResult]);
-    const resultWhole = resultData;
+  const attemptId = route.params?.attemptId || getAttemptId(submitTestResponse) || getAttemptId(startTestResponse);
+  const routeResultData = route.params?.resultData;
+  const resultData = useMemo(() => routeResultData || testResult?.data || testResult || {}, [routeResultData, testResult]);
+  const resultWhole = resultData;
 
-    useEffect(() => {
-        if (attemptId && !routeResultData) {
-            dispatch(getTestResultRequest({ id: attemptId }));
-        }
-    }, [attemptId, dispatch, routeResultData]);
-
-    const reviewItems = useMemo(() => getReviewItems(resultWhole), [resultWhole]);
-
-    const submitData = submitTestResponse?.data || submitTestResponse || {};
-    const score = route.params?.score ?? resultData?.score ?? resultData?.finalScore ?? resultData?.obtainedMarks ?? submitData?.score ?? 0;
-    const totalMarks = resultData?.maxScore ?? resultData?.maxMarks ?? resultData?.quiz?.totalMarks ?? submitData?.maxScore ?? 0;
-    const rawResultItems = getRawResultItems(resultWhole);
-    const totalQuestionsFromResults = rawResultItems.length || reviewItems.length;
-    const attemptedFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item)).length;
-    const correctFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === true).length;
-    const wrongFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === false).length;
-    const skippedFromUserAnswer = Math.max(totalQuestionsFromResults - attemptedFromUserAnswer, 0);
-
-    const attempted = rawResultItems.length > 0 ? attemptedFromUserAnswer : resultData?.questionCount ?? resultData?.attempted ?? resultData?.stats?.attempted ?? resultData?.results?.length ?? submitData?.answers?.length ?? reviewItems.filter((item: any) => item.status !== 'skipped').length;
-    const correct = rawResultItems.length > 0 ? correctFromUserAnswer : resultData?.correctAnswers ?? resultData?.correct ?? resultData?.stats?.correct ?? reviewItems.filter((item: any) => item.status === 'correct').length;
-    const wrong = rawResultItems.length > 0 ? wrongFromUserAnswer : resultData?.wrongAnswers ?? resultData?.wrong ?? resultData?.stats?.wrong ?? reviewItems.filter((item: any) => item.status === 'incorrect').length;
-    const skipped = rawResultItems.length > 0 ? skippedFromUserAnswer : resultData?.skippedQuestions ?? resultData?.skipped ?? resultData?.stats?.skipped ?? reviewItems.filter((item: any) => item.status === 'skipped').length;
-
-    const rawNegativeMarkingText = reviewItems.some((item: any) => Number(item.marksAwarded) < 0) ? `${Math.min(...reviewItems.map((item: any) => Number(item.marksAwarded) || 0))}` : '0';
-    const negativeMarkingValue = Math.abs(Number(rawNegativeMarkingText));
-    const calculatedPenalty = Number(wrong) * negativeMarkingValue;
-    const penaltyRaw = calculatedPenalty > 0 ? calculatedPenalty : (resultData?.negativeMarks ?? resultData?.penalty ?? resultData?.stats?.penalty ?? 0);
-    const penalty = Number(penaltyRaw).toFixed(2).replace(/\.?0+$/, '');
-
-    const rawCorrectMarkingText = reviewItems.some((item: any) => Number(item.questionMarks) > 0) ? `${Math.max(...reviewItems.map((item: any) => Number(item.questionMarks) || 0))}` : '';
-    const correctMarkingValue = Math.abs(Number(rawCorrectMarkingText));
-    const calculatedEarned = Number(correct) * correctMarkingValue;
-    const earnedRaw = calculatedEarned > 0 ? calculatedEarned : (resultData?.score ?? resultData?.marksEarned ?? resultData?.stats?.earned ?? submitData?.score ?? score);
-    const earned = Number(earnedRaw).toFixed(2).replace(/\.?0+$/, '');
-    
-    const displayScore = Number(score).toFixed(2).replace(/\.?0+$/, '');
-
-    const title = route.params?.title || resultData?.title || resultData?.quiz?.title || startTestResponse?.title || startTestResponse?.quiz?.title || 'Mock Test';
-    const rank = resultData?.rank || resultData?.allIndiaRank || resultData?.air || '-';
-
-    if (isLoading && !reviewItems.length) {
-        return (
-            <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-                <View style={styles.loadingCenter}>
-                    <ActivityIndicator size="large" color={theme.colors.primary} />
-                </View>
-            </SafeAreaView>
-        );
+  useEffect(() => {
+    if (attemptId && !routeResultData) {
+      dispatch(getTestResultRequest({ id: attemptId }));
     }
+  }, [attemptId, dispatch, routeResultData]);
+
+  const reviewItems = useMemo(() => getReviewItems(resultWhole), [resultWhole]);
+
+  const submitData = submitTestResponse?.data || submitTestResponse || {};
+  const score = route.params?.score ?? resultData?.score ?? resultData?.finalScore ?? resultData?.obtainedMarks ?? submitData?.score ?? 0;
+  const totalMarks = resultData?.maxScore ?? resultData?.maxMarks ?? resultData?.quiz?.totalMarks ?? submitData?.maxScore ?? 0;
+  const rawResultItems = getRawResultItems(resultWhole);
+  const totalQuestionsFromResults = rawResultItems.length || reviewItems.length;
+  const attemptedFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item)).length;
+  const correctFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === true).length;
+  const wrongFromUserAnswer = rawResultItems.filter((item: any) => hasUserAnswered(item) && item?.isCorrect === false).length;
+  const skippedFromUserAnswer = Math.max(totalQuestionsFromResults - attemptedFromUserAnswer, 0);
+
+  const attempted = rawResultItems.length > 0 ? attemptedFromUserAnswer : resultData?.questionCount ?? resultData?.attempted ?? resultData?.stats?.attempted ?? resultData?.results?.length ?? submitData?.answers?.length ?? reviewItems.filter((item: any) => item.status !== 'skipped').length;
+  const correct = rawResultItems.length > 0 ? correctFromUserAnswer : resultData?.correctAnswers ?? resultData?.correct ?? resultData?.stats?.correct ?? reviewItems.filter((item: any) => item.status === 'correct').length;
+  const wrong = rawResultItems.length > 0 ? wrongFromUserAnswer : resultData?.wrongAnswers ?? resultData?.wrong ?? resultData?.stats?.wrong ?? reviewItems.filter((item: any) => item.status === 'incorrect').length;
+  const skipped = rawResultItems.length > 0 ? skippedFromUserAnswer : resultData?.skippedQuestions ?? resultData?.skipped ?? resultData?.stats?.skipped ?? reviewItems.filter((item: any) => item.status === 'skipped').length;
+
+  const rawNegativeMarkingText = reviewItems.some((item: any) => Number(item.marksAwarded) < 0) ? `${Math.min(...reviewItems.map((item: any) => Number(item.marksAwarded) || 0))}` : '0';
+  const negativeMarkingValue = Math.abs(Number(rawNegativeMarkingText));
+  const calculatedPenalty = Number(wrong) * negativeMarkingValue;
+  const penaltyRaw = calculatedPenalty > 0 ? calculatedPenalty : (resultData?.negativeMarks ?? resultData?.penalty ?? resultData?.stats?.penalty ?? 0);
+  const penalty = Number(penaltyRaw).toFixed(2).replace(/\.?0+$/, '');
+
+  const rawCorrectMarkingText = reviewItems.some((item: any) => Number(item.questionMarks) > 0) ? `${Math.max(...reviewItems.map((item: any) => Number(item.questionMarks) || 0))}` : '';
+  const correctMarkingValue = Math.abs(Number(rawCorrectMarkingText));
+  const calculatedEarned = Number(correct) * correctMarkingValue;
+  const earnedRaw = calculatedEarned > 0 ? calculatedEarned : (resultData?.score ?? resultData?.marksEarned ?? resultData?.stats?.earned ?? submitData?.score ?? score);
+  const earned = Number(earnedRaw).toFixed(2).replace(/\.?0+$/, '');
+
+  const displayScore = Number(score).toFixed(2).replace(/\.?0+$/, '');
+
+  const title = route.params?.title || resultData?.title || resultData?.quiz?.title || startTestResponse?.title || startTestResponse?.quiz?.title || 'Mock Test';
+  const rank = resultData?.analytics?.rank ?? resultData?.rank ?? resultData?.allIndiaRank ?? resultData?.air ?? '-';
+
+  if (isLoading && !reviewItems.length) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { paddingBottom: Math.max(insets.bottom, 0) }]} edges={['top', 'left', 'right']}>
@@ -178,11 +178,11 @@ export const ResultScreen = () => {
           <View style={styles.heroGlowOne} />
           <View style={styles.heroGlowTwo} />
           <View style={styles.header}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 dispatch(bootstrapHomeRequest({}));
                 navigation.navigate(ROUTES.BOTTOM_TABS);
-              }} 
+              }}
               style={styles.backButton}
             >
               <Icon name="chevron-back" size={22} color={theme.colors.white} />
@@ -307,19 +307,19 @@ export const ResultScreen = () => {
                   />
                   <View key={item.id} style={styles.questionBody}>
                     <View style={styles.questionTopRow}>
-                    <View style={styles.questionTag}>
-                      <Text style={styles.questionNumber}>Q{item.questionNumber}</Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.markValue,
-                        isCorrect && styles.markValueCorrect,
-                        isSkipped && styles.markValueSkipped,
-                        isIncorrect && styles.markValueIncorrect,
-                      ]}
-                    >
-                      {item.marksAwarded}
-                    </Text>
+                      <View style={styles.questionTag}>
+                        <Text style={styles.questionNumber}>Q{item.questionNumber}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.markValue,
+                          isCorrect && styles.markValueCorrect,
+                          isSkipped && styles.markValueSkipped,
+                          isIncorrect && styles.markValueIncorrect,
+                        ]}
+                      >
+                        {item.marksAwarded}
+                      </Text>
                     </View>
 
                     <Text style={styles.questionText}>{item.questionText}</Text>
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.interbold,
     fontSize: 14,
     marginBottom: 4,
-    fontWeight:'bold'
+    fontWeight: 'bold'
   },
   mockNameText: {
     color: theme.colors.text,

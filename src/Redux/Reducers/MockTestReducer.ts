@@ -20,6 +20,12 @@ const initialState = {
     documentLoading: false,
     documentResponse: null as any,
     documentError: null as any,
+    leaderboardLoading: false,
+    leaderboardData: [] as any[],
+    leaderboardError: null as any,
+    quizLeaderboardLoading: false,
+    quizLeaderboardData: null as any,
+    quizLeaderboardError: null as any,
 };
 
 const MockTestSlice = createSlice({
@@ -244,6 +250,40 @@ const MockTestSlice = createSlice({
         clearMockTestData(_state) {
             return initialState;
         },
+        leaderboardRequest(state) {
+            state.status = 'leaderboardRequest';
+            state.leaderboardLoading = true;
+            state.leaderboardError = null;
+        },
+        leaderboardSuccess(state, action) {
+            state.status = 'leaderboardSuccess';
+            state.leaderboardData = action.payload;
+            state.leaderboardLoading = false;
+            state.leaderboardError = null;
+        },
+        leaderboardFailure(state, action: any) {
+            state.status = 'leaderboardFailure';
+            state.leaderboardData = [];
+            state.leaderboardLoading = false;
+            state.leaderboardError = action.error || action.payload;
+        },
+        quizLeaderboardRequest(state, _action) {
+            state.status = 'quizLeaderboardRequest';
+            state.quizLeaderboardLoading = true;
+            state.quizLeaderboardError = null;
+        },
+        quizLeaderboardSuccess(state, action) {
+            state.status = 'quizLeaderboardSuccess';
+            state.quizLeaderboardData = action.payload;
+            state.quizLeaderboardLoading = false;
+            state.quizLeaderboardError = null;
+        },
+        quizLeaderboardFailure(state, action: any) {
+            state.status = 'quizLeaderboardFailure';
+            state.quizLeaderboardData = null;
+            state.quizLeaderboardLoading = false;
+            state.quizLeaderboardError = action.error || action.payload;
+        },
     }
 });
 
@@ -293,6 +333,12 @@ export const {
     documentRequest,
     documentSuccess,
     documentFailure,
+    leaderboardRequest,
+    leaderboardSuccess,
+    leaderboardFailure,
+    quizLeaderboardRequest,
+    quizLeaderboardSuccess,
+    quizLeaderboardFailure,
 } = MockTestSlice.actions;
 
 export default MockTestSlice.reducer;

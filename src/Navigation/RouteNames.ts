@@ -30,4 +30,6 @@ export const ROUTES = {
   ABOUT_US: 'AboutUs',
   PRIVACY_POLICY: 'PrivacyPolicyScreen',
   TERMS_CONDITIONS: 'TermsConditionsScreen',
+  LEADERBOARD: 'LeaderboardScreen',
+  QUIZ_LEADERBOARD: 'QuizLeaderboardScreen',
 };

@@ -279,6 +279,15 @@ export const NURSING_SUBJECTS = [
             "Palliative Care",
             "Oncology Nursing"
         ]
+    },
+    {
+        name: "RRB Nursing Superintendent",
+        topics: [
+            "General Awareness",
+            "General Intelligence & Reasoning",
+            "General Science",
+            "Professional Ability (Nursing)"
+        ]
     }
 ];
 
@@ -345,5 +354,5 @@ export const sortNursingSubjects = <T extends Record<string, any>>(items: T[], g
         })) as T[];
 };
 
-export const NURSING_ACCESS_DURATION_LABEL = 'No Expiry';
+export const NURSING_ACCESS_DURATION_LABEL = '1 Month';
 export const NURSING_ACCESS_EXPIRY_LABEL = 'No Expiry';

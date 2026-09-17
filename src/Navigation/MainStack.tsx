@@ -14,6 +14,8 @@ import { CoursesPaymentHistoryScreen } from '../Screen/CoursesPaymentHistoryScre
 import { AboutUsScreen } from '../Screen/Legal/AboutUs';
 import { PrivacyPolicyScreen } from '../Screen/Legal/PrivacyPolicy';
 import { TermsConditionsScreen } from '../Screen/Legal/TermsConditions';
+import { LeaderboardScreen } from '../Screen/Leaderboard/LeaderboardScreen';
+import { QuizLeaderboardScreen } from '../Screen/Leaderboard/QuizLeaderboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -23,6 +25,8 @@ export const MainStack = () => {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name={ROUTES.BOTTOM_TABS} component={BottomTabs} />
+      <Stack.Screen name={ROUTES.LEADERBOARD} component={LeaderboardScreen} />
+      <Stack.Screen name={ROUTES.QUIZ_LEADERBOARD} component={QuizLeaderboardScreen} />
       <Stack.Screen name={ROUTES.MOCK_TEST_SCREEN} component={MockTestScreen} />
       <Stack.Screen name={ROUTES.MOCK_TEST_RULES} component={MockTestRulesScreen} />
       <Stack.Screen name={ROUTES.MOCK_TEST_QUESTION} component={MockTestQuestionScreen} />

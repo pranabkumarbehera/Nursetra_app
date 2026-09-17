@@ -235,7 +235,7 @@ export function* logoutSaga(): Generator<any, void, any> {
             yield call(postApi, 'auth/logout', {}, header);
         }
     } catch (error: any) {
-        yield put(logoutFailure(error));
+        // Silently swallow token expiry or network errors during logout
     } finally {
         yield call(AsyncStorage.removeItem, constants.TOKEN);
         yield call(AsyncStorage.removeItem, constants.REFRESH_TOKEN);
@@ -245,6 +245,7 @@ export function* logoutSaga(): Generator<any, void, any> {
         yield put({ type: 'Profile/clearProfile' });
         yield put({ type: 'MockTest/clearMockTestData' });
         yield put({ type: 'Home/clearHomeData' });
+        Toast.hide();
         Toast.show({ type: 'success', text1: 'Logout successfully !' });
     }
 }

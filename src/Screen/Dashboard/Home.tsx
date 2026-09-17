@@ -13,19 +13,17 @@ import { getProfileName, normalizeDashboardStats, normalizeRecentItems, formatPe
 import { Colorpath, Fonts, theme } from '../../Themes';
 import { QUICK_ACTIONS } from '../../Constants/dummyData';
 import { ROUTES } from '../../Navigation/RouteNames';
-import { CategoriesFAB } from '../../Components/CategoriesFAB';
 import { HomeSkeleton } from '../../Components/LoadingSkeletons';
 
 const { width } = Dimensions.get('window');
 
 const actionIcons: Record<string, string> = {
   '7': 'layers',
-  '1': 'flash',
-  '2': 'book',
-  '3': 'document-text',
-  '4': 'calendar',
-  '5': 'trophy',
   '6': 'copy',
+  '8': 'shield-checkmark',
+  '9': 'ribbon',
+  '4': 'calendar',
+  '10': 'medical',
 };
 
 const LOCAL_EXAM_CATEGORIES = ['All Subjects', 'Elite Mock', 'NORCET', 'CHO', 'GNM', 'B.Sc Nursing', 'ESIC', 'RRB'];
@@ -194,7 +192,6 @@ export const HomeScreen = () => {
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 96, 120) }]} showsVerticalScrollIndicator={false}>
           <HomeSkeleton />
         </ScrollView>
-        <CategoriesFAB />
       </SafeAreaView>
     );
   }
@@ -208,7 +205,7 @@ export const HomeScreen = () => {
           <Text style={styles.greeting}>
             <Text style={styles.userName}>{profileName}</Text> 👋
           </Text>
-          <Text style={styles.subGreeting}>Your nursing journey starts here</Text>
+          <Text style={styles.subGreeting}>Your learning journey starts here</Text>
         </View>
       </View>
 
@@ -233,6 +230,27 @@ export const HomeScreen = () => {
         </View>
 
         <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>LeaderBoard</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.leaderboardBanner}
+          onPress={() => navigation.navigate(ROUTES.LEADERBOARD)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.leaderboardBannerLeft}>
+            <View style={styles.trophyCircle}>
+              <Text style={{ fontSize: 22 }}>🏆</Text>
+            </View>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.leaderboardTitle}>My Attended Quizzes Leaderboard</Text>
+              <Text style={styles.leaderboardSubtitle}>View your rankings, scores & candidate positions</Text>
+            </View>
+          </View>
+          <Icon name="chevron-forward" size={20} color={theme.colors.primary} />
+        </TouchableOpacity>
+
+        <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
           <Text style={styles.sectionTitle}>Explore</Text>
         </View>
 
@@ -241,11 +259,11 @@ export const HomeScreen = () => {
             <TouchableOpacity
               key={action.id}
               style={styles.actionItem}
-              onPress={() => navigation.navigate(resolveRoute(action.route))}
+              onPress={() => navigation.navigate(resolveRoute(action.route), action.params)}
               activeOpacity={0.7}
             >
               <View style={styles.actionIconCircle}>
-                <Icon name={actionIcons[action.id] || 'apps'} size={24} color={theme.colors.primary} />
+                <Icon name={action.icon || actionIcons[action.id] || 'apps'} size={24} color={theme.colors.primary} />
               </View>
               <Text style={styles.actionText}>{action.title}</Text>
             </TouchableOpacity>
@@ -325,7 +343,6 @@ export const HomeScreen = () => {
           ) : null}
         </View>
       </ScrollView>
-      <CategoriesFAB />
     </SafeAreaView>
   );
 };
@@ -363,6 +380,34 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: Fonts.intermedium, fontSize: 12, opacity: 0.8 },
   sectionHeaderRow: { paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { color: theme.colors.text, fontFamily: Fonts.interbold, fontSize: 18, fontWeight: "bold" },
+  leaderboardBanner: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  leaderboardBannerLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  trophyCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leaderboardTitle: { color: theme.colors.text, fontFamily: Fonts.interbold, fontSize: 15 },
+  leaderboardSubtitle: { color: Colorpath.TextSecondary, fontFamily: Fonts.intermedium, fontSize: 12, marginTop: 2 },
   actionGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, marginBottom: 16, justifyContent: 'space-between' },
   actionItem: { width: '31%', alignItems: 'center', marginBottom: 20 },
   actionIconCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2, marginBottom: 10 },
