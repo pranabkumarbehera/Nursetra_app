@@ -241,7 +241,7 @@ Connect these core paths using existing behavior:
 
 Connect expansion prototypes separately and annotate their implementation dependencies. For each core frame, record the source screen/component, entry point, primary action, destination, and data dependency outside the mobile artwork. Keep implementation details out of user-facing copy.
 
-FINAL ACCEPTANCE CRITERIA
+FINAL ACCEPTANCE CRITERIA MeritzoApp
 Every registered source screen and major nested content view has a Meritzo equivalent. The four tabs, auth fields, catalog behavior, bundle access, payment verification, test controls, results, protected content, referral sharing, and quiz leaderboards remain functionally faithful. The UI retains NursetraApp's familiar card-based structure while adopting the supplied Meritzo identity. Expanded central/state/all-exam discovery is scalable and clearly distinguished from currently supported behavior. No unsupported action is presented as already working.
 
 Deliver the complete design system, mobile screens, key responsive variants, source-to-frame mapping, and connected core and expansion prototypes in one Figma file. Preserve functionality. Refine the UI. Rebrand to MeritzoApp.
