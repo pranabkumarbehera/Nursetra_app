@@ -1,0 +1,164 @@
+MERITZO — FIGMA MOBILE APP DESIGN PROMPT
+
+Design a complete, high-fidelity mobile app UI and clickable prototype for “Meritzo”, a mock-test and exam-preparation platform for Indian central government and all state government recruitment exams. Use the supplied Meritzo logo as the brand reference. Follow the NursetraApp design language described below, adapting its nursing-focused content into a broad government-exam platform.
+
+PRODUCT DIRECTION
+Brand: Meritzo
+Tagline: “Practice smarter. Rise higher.”
+Positioning: One platform for central and state government mock-test preparation, accessible to learners anywhere. “Global mock series” describes the platform's broad reach; the initial exam catalog focuses on India. Do not introduce unrelated international exam catalogs.
+Audience: First-time aspirants, repeat candidates, students, and working professionals preparing across multiple exam categories and languages.
+Primary journey: Choose exam goals → discover a mock series → attempt a test → review explanations → track improvement.
+Use realistic illustrative content. Exam availability, prices, dates, participant counts, and scoring rules are demo data, not verified official information. Identify this in Figma annotations. Avoid government affiliation claims and guaranteed selection claims.
+
+1. PRESERVE NURSETRAAPP'S VISUAL FOUNDATION
+Use a clean, light mobile interface with Inter typography, pale blue-gray backgrounds, white cards, generous spacing, soft shadows, subtle borders, rounded filter chips, and simple consistent outline icons.
+Preserve these recognizable patterns:
+- Personalized greeting at the top of Home.
+- A 2 × 2 performance grid for Accuracy, Rank, Streak, and Tests.
+- A compact leaderboard banner with a trophy icon and chevron.
+- A three-column Explore grid with circular icon containers.
+- Horizontally scrollable exam filter chips.
+- Recent-attempt cards with Score, Accuracy, and Percentile in a divided three-column footer.
+- Four bottom navigation tabs: Home, Mock Bank, Subject Bank, Profile.
+- A clear flow from mock listing to rules, timed questions, results, and solutions.
+Replace nursing-specific default categories and medical icons with government-exam categories and neutral learning icons. Nursing recruitment may remain an optional category under healthcare recruitment, but must not dominate the product.
+
+2. MERITZO BRAND SYSTEM
+Reference the supplied logo: a rounded deep-blue square with three ascending bars, white first and middle bars, and a cyan-to-blue tallest bar. Preserve its proportions and artwork. Use its upward-progress motif subtly in onboarding illustrations and progress visuals.
+Proposed interface colors inspired by the logo:
+- Primary royal blue: #075BFF
+- Deep navy: #071B55
+- Cyan accent: #00CFF2
+- App background: #F4F9FF
+- Alternate section background: #F8FAFC
+- Card/surface: #FFFFFF
+- Main text: #0F172A
+- Secondary text: #64748B
+- Border: #DCE7F5
+- Success: #15803D, with pale green backgrounds
+- Warning: #B45309, with pale amber backgrounds
+- Error: #DC2626, with pale red backgrounds
+Use blue-to-cyan gradients sparingly for splash, a featured challenge card, and premium highlights. Keep test-taking screens calm and mostly white. Use dark text on bright cyan surfaces and verify contrast for all text and buttons.
+Typography: Inter Regular, Medium, SemiBold, Bold. Use a compatible regional-script font where Inter lacks glyphs. Page titles 24–28 px, section headings 18–20 px, body and question text 16–18 px, secondary labels 14 px, compact metadata 12 px minimum.
+Spacing: 4/8/12/16/20/24/32 px; 20 px horizontal screen padding. Cards 20–24 px radius, buttons and fields 16 px, pills fully rounded. Main buttons 52 px high; interactive targets at least 44 × 44 px.
+
+3. FIGMA STRUCTURE
+Create mobile-first frames at 390 × 844 px with native safe areas. Demonstrate responsive constraints on a compact 360 px layout and a larger 430 px layout for Home and the test player.
+Use Auto Layout, reusable components, semantic color variables, text styles, and meaningful layer names. Keep text editable and icons as vectors. Avoid flattening screens into images.
+Organize pages as: Foundations, Components, Onboarding & Auth, Home & Discovery, Tests & Practice, Results & Rankings, Subscription & Profile, Prototype.
+Create component variants for buttons, fields, chips, exam cards, series cards, performance tiles, tab navigation, question options, timer, question palette, banners, bottom sheets, and empty states.
+
+4. REQUIRED SCREENS AND CONTENT
+
+A. Splash and onboarding
+- Splash with the supplied logo, Meritzo wordmark, and tagline.
+- Three onboarding slides: “Every goal starts with practice”, “Central and state exams, one app”, and “Know your strengths. Improve your score.”
+- Use simple progress-inspired illustrations, page indicators, Skip, Next, and Get Started.
+
+B. Authentication and goal setup
+- Phone/email login, registration, OTP verification, and password recovery with validation and resend states.
+- Language preference screen; separate interface language from test language.
+- Select exam scope: Central Government, State Government, or Both.
+- Searchable state/union-territory picker supporting every Indian state and union territory; allow multiple selections.
+- Select exam categories and specific target exams; allow goals to be edited later.
+- Support English, Hindi, and regional-language preferences such as Telugu, Tamil, Kannada, Malayalam, Marathi, Bengali, Gujarati, Odia, Punjabi, Assamese, and Urdu. Show availability per test rather than implying every test supports every language. Include an RTL layout example for Urdu.
+
+C. Home dashboard
+Preserve NursetraApp's hierarchy while adding goal selection:
+- Greeting: “Hi, Aarav” and “Ready to move closer to your goal?”
+- Compact target-exam switcher and notifications icon.
+- Four pastel stat tiles: Accuracy 78%, Rank #248, Streak 7 days, Tests 24. Show the selected exam/cohort for rank.
+- White leaderboard banner: “See where you stand”.
+- One featured blue challenge card: “All-India Mock Challenge”, exam label, schedule, and “View challenge”.
+- Explore grid: Central Exams, State Exams, Full Mocks, Previous Papers, Daily Quiz, Current Affairs.
+- Continue Practice card with saved progress and Resume action when permitted by test rules.
+- Recommended Mock Series with clear Free/Premium badges.
+- Performance & Activity with horizontal target-exam chips and recent-attempt cards.
+Keep the first viewport focused on the greeting, goal selection, and progress. Use progressive disclosure for the broader catalog.
+
+D. Exam discovery and state hub
+- Global search: “Search exams, states, or mock series”.
+- Scope tabs: All, Central, State.
+- Central exam category examples: SSC, UPSC, Railways, Banking & Insurance, Defence, Teaching, and Other Recruitment. Treat these as navigation examples, not an official classification of employers.
+- Specific illustrative targets: SSC CGL, SSC CHSL, UPSC Civil Services, RRB NTPC, IBPS PO, and SBI Clerk.
+- State discovery: searchable state/union-territory list, recently selected regions, and saved goals. Example region cards: Andhra Pradesh, Telangana, Tamil Nadu, Karnataka, Maharashtra, Uttar Pradesh, Bihar, West Bengal, and Rajasthan. The full picker must support all regions, not only these examples.
+- State hub with State PSC, Police, Teaching, Group Exams, and Other Recruitment categories where available.
+- Filter bottom sheet: region, exam, language, test type, Free/Premium, and availability; include Reset and Apply.
+- Provide a helpful “No series available yet” state with an option to save the exam goal.
+
+E. Mock Bank and series details
+- Search and chips for All, Full Mocks, Sectional, Previous Papers, Free, and My Series.
+- Series cards display title, exam/region, languages, number of tests, validity, free-test availability, and one clear action.
+- Series detail includes summary, syllabus coverage, included test types, language availability, validity, and test list.
+- Test rows show questions, duration, total marks, availability, and status: Start, Resume, View Result, or Locked.
+- Use exam-specific metadata; never apply one universal duration, question count, or negative-marking rule across all exams.
+- Sticky bottom action: Start Free Test or Unlock Series as appropriate.
+
+F. Subject Bank, previous papers, and daily practice
+- Subject grid: Quantitative Aptitude, Reasoning, General Awareness, English, General Science, Computer Awareness, State GK, and Regional Language. Filter subjects according to the selected exam.
+- Topic detail with progress, practice sets, difficulty, and bookmarked questions.
+- Previous papers filter by exam, year, and shift where applicable.
+- Daily quiz and current affairs screens with date, topic, language, and completion states.
+- Visually distinguish untimed practice from timed exam simulation.
+
+G. Test instructions
+- Exam and test name, duration, question count, maximum marks, section breakdown, and language picker.
+- Explain positive marks, penalties, section timing, navigation, resume policy, and submission behavior for this specific test.
+- Instruction acknowledgement and prominent Start Test button.
+- Include language-unavailable and test-not-yet-open states.
+
+H. Timed test player
+- Remove main bottom navigation during an active attempt.
+- Fixed top area with concise test title, question position, timer, and question-palette action.
+- Section tabs where applicable, question text, optional passage/image, and four comfortably spaced answer options.
+- Support long questions, mathematical notation, and bilingual content without clipping.
+- Answer selection uses a blue border, subtle blue fill, and a visible selected indicator.
+- Actions: Clear Response, Mark for Review, Previous, Save & Next. Place the primary action consistently above the safe area.
+- Question palette with numbers, counts, and a legend for Not Visited, Unanswered, Answered, Marked for Review, and Answered & Marked. Combine color with symbols or labels.
+- Show low-time warning, saved-answer feedback, interrupted-connection state, and reconnection behavior without obscuring questions.
+- Submit confirmation shows answered, unanswered, and review counts; confirm before ending the test. Include time-expired auto-submit feedback.
+- Keep selected-answer styling distinct from correct-answer styling, which appears only in post-test review.
+
+I. Results, analysis, and solutions
+- Result summary with score, accuracy, percentile, rank and cohort size, time used, and correct/incorrect/unanswered counts.
+- Use a consistent illustrative dataset: 100 questions, +2 correct, -0.5 incorrect, 70 correct, 20 incorrect, 10 unanswered; score 130/200 and accuracy 77.8% across attempted questions. Percentile and rank are illustrative cohort metrics, not derived directly from the score. Label percentile without a percent sign.
+- Section analysis, score trend, time allocation, and strengths/improvement areas.
+- Use accessible charts with labels and concise supporting text.
+- Actions: Review Solutions, Practice Weak Topics, View Leaderboard.
+- Solution review filters: All, Correct, Incorrect, Unanswered, Bookmarked. Show selected answer, correct answer, explanation, and Report an Issue.
+- My Results history with exam filter, date, score, and review action.
+
+J. Leaderboards and challenge details
+- All-India and State views scoped to the same exam/test and attempt window.
+- Top-three summary, ranked list, highlighted current-user row, cohort size, and clear ranking criteria.
+- Never combine scores from unrelated exams into one misleading rank.
+- Upcoming, open, completed, and results-pending challenge states.
+
+K. Subscription and payment
+- Meritzo Pass with clearly defined Central, State, and Combined coverage options.
+- Explain included exams, duration, language availability, and access limits.
+- Use clearly annotated demo INR prices; show total payable, applicable tax details, validity, and renewal terms before purchase.
+- Checkout with order summary and payment-method selection; include processing, success, failure/retry, and pending states.
+- Purchased series, subscription status, and payment history.
+
+L. Profile, preferences, and support
+- Profile details, target exams, selected regions, language preferences, saved questions, results, purchased series, and notification settings.
+- Edit profile, help/support, About Meritzo, privacy, terms, logout, and account-deletion confirmation.
+- Notifications for saved-exam challenges, practice reminders, and test availability, with user-controlled preferences.
+
+5. STATES AND ACCESSIBILITY
+Provide representative loading skeletons, no-results search, new-user empty dashboard, offline state, retryable error, locked premium content, expired access, and disabled/loading buttons.
+Do not use color alone for status. Ensure readable contrast, scalable text, clear focus states, legible regional scripts, and generous tap targets. Long exam names and translated labels must wrap gracefully. Sticky controls must not cover content or the keyboard.
+
+6. PROTOTYPE FLOWS
+Connect these end-to-end paths:
+1. Onboarding → login → language and exam goals → personalized Home.
+2. Home → Central Exams → SSC CGL → series detail → free test → instructions → test player → submit → results → solutions.
+3. Home → State Exams → selected state → exam category → series detail → unlock → checkout → success → start test.
+4. Home → recent attempt → performance analysis → weak-topic practice.
+5. Home → leaderboard → selected exam/state ranking.
+6. Profile → update goals/language → updated Home and recommendations.
+Use realistic taps, bottom sheets, selected filters, tab changes, and concise transitions. Keep navigation and back behavior consistent.
+
+FINAL DESIGN EXPECTATION
+Deliver a coherent, production-ready mobile UI with reusable components and a working prototype. It should feel like a Meritzo evolution of NursetraApp: familiar rounded cards, performance tiles, Explore shortcuts, filter chips, and straightforward test-taking, expanded into a scalable central-and-state exam platform. Use the blue/cyan logo as the identity anchor. Prioritize exam discovery, readable questions, clear progress, and actionable results. Avoid clutter, oversized promotional artwork, unnecessary decoration, and generic placeholder dashboards.

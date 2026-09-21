@@ -1,0 +1,247 @@
+MERITZOAPP — GLOBAL MOCK SERIES
+FINAL FIGMA UI / DESIGN SYSTEM PROMPT
+Version 2.0 — matched against the existing NursetraApp source
+
+DESIGN BRIEF
+Create one complete Figma file named “MeritzoApp — Global Mock Series UI & Design System”. Transform NursetraApp into the Meritzo brand while preserving its existing functional flows and recognizable UI patterns. Deliver a practical React Native mobile design, reusable components, important states, and connected prototypes.
+
+Use the attached Meritzo logo. Product display name: Meritzo. Project name: MeritzoApp. Brand message: “Prepare Smarter. Practice More. Perform Better.”
+
+The product is a broad exam-preparation platform serving Indian central government, all state government and union-territory recruitment, banking, healthcare, engineering, teaching, law, management, and competitive entrance examinations. “Global Mock Series” is the umbrella catalog identity, not a claim of international accreditation or a universal ranking across unrelated exams.
+
+SOURCE OF TRUTH AND SCOPE
+The existing NursetraApp is the functional reference. Preserve navigation destinations, fields, validation, access restrictions, purchase/enrollment behavior, test timing, answer handling, result calculations, content viewers, and account actions. This task produces Figma designs only; it does not rewrite APIs, Redux, business logic, or app code.
+
+Use two explicit design scopes:
+A. CORE / EXISTING FUNCTIONALITY: every registered screen and working nested view receives a Meritzo equivalent. Preserve the current interactions.
+B. CATALOG EXPANSION CONCEPT: reusable central/state/exam discovery examples and other future-only controls. Label these in Figma annotations as requiring catalog/configuration or implementation support. Do not imply they already exist, insert them as mandatory steps in the core flow, or connect unsupported controls to imaginary working services.
+
+The expanded catalog is a product requirement, not evidence that all exam content is already available. Use illustrative data and avoid unsupported availability, learner-count, teacher, affiliation, or success-rate claims. Where catalog data can use existing categories/subcategories, reuse that structure. Additional hierarchy or metadata requires an annotated extension.
+
+1. VISUAL MATCH WITH NURSETRAAPP
+Keep the recognizable visual grammar:
+- Inter typography and a light blue-gray canvas.
+- White rounded cards with subtle borders and soft shadows.
+- Personalized greeting, 2 × 2 pastel performance tiles, leaderboard banner, three-column Explore grid, horizontal filter pills, and recent-attempt cards on Home.
+- Existing four-tab navigation with icons above labels.
+- Search fields, category/subcategory selectors, vertically stacked mock cards, rounded action buttons, and bottom-sheet/modal patterns.
+- Course/bundle catalog, nested content views, and compact metadata sections.
+- Calm, readable question screens and clear result-review cards.
+
+Rebrand and refine spacing, hierarchy, icons, and surfaces. Do not replace the familiar structure with an unrelated dashboard, a dense promotional storefront, or a new navigation model. Replace medical-only decorative backgrounds with restrained books, questions, or ascending-progress motifs.
+
+2. MERITZO DESIGN TOKENS
+Use the supplied logo artwork without distorting it: deep-blue rounded square, ascending white bars, and a cyan/blue tallest bar. Preserve proportions and clear space.
+Primary Blue #0057D9
+Navy #061A4D
+Bright Blue #0066FF
+Cyan #00C8EE
+Canvas #F5F8FF
+Surface #FFFFFF
+Primary Text #0F172A
+Secondary Text #64748B
+Border #DCE5F2
+Success #16A34A
+Error #DC2626
+Warning #F59E0B
+
+Use cyan as an accent and navy for high-contrast text. Amber is limited to warning/attention states and occasional premium indicators. Yellow/orange must not become primary brand colors. Use gradients sparingly in splash, selected hero areas, and result summaries. Verify text contrast; use darker semantic text variants when needed.
+
+Inter: display 28–32, page titles 24–28, section titles 18–22, body 14–16, questions 16–18, captions 12–13, buttons 14–16 px. Use regular/medium/semibold/bold consistently.
+Spacing: 8-point foundation with 4 px half-steps; preserve approximately 20 px screen gutters. Card radius 20–24, button/input radius 16, full-round chips. Primary buttons approximately 52 px high; tap targets at least 44 × 44 px. Keep shadows subtle.
+
+Primary frame: 390 × 844. Validate key layouts at 360 × 800, 375 × 812, 412 × 915, and 430 × 932. Respect safe areas, keyboard avoidance, text wrapping, and scrollable content. Use semantic variables so dark mode can be added later; deliver light mode as the primary design.
+
+3. NAVIGATION AND SCREEN PARITY
+Maintain exactly four bottom tabs:
+Home → HomeScreen
+Mock Bank → SubjectTestsScreen
+Subject Bank → CourseScreen
+Profile → ProfileScreen
+
+The internal name SubjectTestsScreen currently represents the Mock Bank tab. CourseScreen represents Subject Bank and includes more than simple practice questions. Preserve these responsibilities.
+
+Create Meritzo equivalents for these existing route screens:
+SplashScreen; OnboardingScreen; LoginScreen; RegisterScreen; ForgotPasswordScreen; OtpScreen; ChangePasswordScreen; HomeScreen; SubjectTestsScreen; CourseScreen; ProfileScreen; MockTestScreen; MockTestRulesScreen; MockTestQuestionScreen; ResultsScreen; MyResultsScreen; LeaderboardScreen; QuizLeaderboardScreen; PreviousYearQuestionsScreen; EditProfileScreen; CoursesPaymentHistory; AboutUs; PrivacyPolicyScreen; TermsConditionsScreen.
+
+Also cover the nested course detail views, content modals, profile edit modal, purchase WebView, and application update prompt. Preserve current entry points and back behavior. A route constant or unused source file alone is not proof of a working destination; do not promote Notifications, Settings, Rapid Revision, standalone Question Bank, or a PYQ bottom tab into active core navigation without a working source connection.
+
+4. SPLASH, ONBOARDING, AND AUTHENTICATION
+Splash: Meritzo logo and wordmark with the current startup/auth-routing purpose.
+Onboarding: retain the existing multi-slide flow and controls, replacing nursing-only messaging with broad exam preparation. Describe actual mock tests, question banks, notes, videos, and results. Avoid unsupported live classes or doubt-support claims.
+Login: email, password with visibility toggle, Remember Me, Forgot Password, sign-in action, and registration link. Keep field errors and loading states.
+Registration: first name, last name, current gender choices, email, mobile number, password, confirm password, terms/privacy acknowledgement, and existing submission/navigation behavior. Preserve current required fields and validation, including the mobile input constraints.
+Recovery: registered email → send OTP → six-digit email OTP verification/resend → new password and confirmation → login.
+Change Password: preserve the separate authenticated mode with current password, new password, and confirmation.
+Do not add phone-OTP login, social login, or guest browsing to the core design; those flows are not established by the current auth screens. Do not force new exam-goal onboarding before Home.
+
+5. HOME — PRESERVE THE ACTUAL HIERARCHY
+Use this sequence:
+1. Personalized name/greeting and short learning message.
+2. Accuracy, Rank, Streak, Tests in four pastel tiles arranged 2 × 2.
+3. White leaderboard entry card with trophy, supporting text, and chevron.
+4. Explore: six circular-icon shortcuts in a three-column grid.
+5. Performance & Activity heading.
+6. Horizontally scrollable exam/category filter pills.
+7. Recent-attempt cards showing title/date and Score, Accuracy, Percentile.
+
+Retain the source shortcut behavior: links into course catalog with exam/subject/search context, and Daily Test into the existing mock listing. Example Meritzo content labels can include Free Mock Bundle, All Subject Bundle, Railway Exams, SSC Exams, Daily Test, and State Exam Bundle when matching catalog entries exist. Preserve equivalent destinations rather than inventing six new modules.
+
+Home result cards open the existing result screen using the attempt identity. Include new-user, no-recent-activity, loading, and failure states. Do not fill empty data with invented achievements.
+
+Do not add twenty permanent promotional sections to Home. Search, recommended content, goal switchers, notifications, and challenge banners from the earlier concept belong to the annotated expansion page unless already supported by a working source flow.
+
+6. MOCK BANK AND MOCK LISTING
+Preserve the existing search, category and subcategory controls, list behavior, and test-card actions. Provide Meritzo equivalents for both the main Mock Bank listing and registered MockTestScreen.
+
+Cards retain available subject/exam, title/topic, full marks, duration, validity, negative marking, pricing/access state, and start action. Show only metadata actually available for that item. Reuse one card system across exams.
+
+Represent existing free/locked/access states and the current unlock prompt where present. Do not assume the simple mock unlock prompt implements the same verified payment flow as course purchases; annotate its source behavior for handoff. Do not claim payment succeeded simply because Start is pressed.
+
+“All Mocks”, “My Mocks”, “Recommended”, difficulty filters, and saved progress filters are optional future variants unless backed by current list state/data. Keep core search and category filtering intact.
+
+7. SUBJECT BANK, BUNDLES, AND STUDY MATERIALS — REQUIRED
+Preserve CourseScreen's subject/exam catalog switching, search, categories, pagination, bundle selection, enrollment, and access rules.
+
+Bundle cards show available name, price/discount, validity, content indicators, and View/Open/enrollment actions. Preserve access eligibility, including existing purchased-subject/all-subject-bundle requirements for category-exam access. Do not replace these rules with an invented Meritzo Pass.
+
+Bundle detail retains its supported Mock Bank and Study Materials sections, shown when corresponding content exists.
+Design all existing nested experiences:
+- Mock lists and rule/test entry.
+- Note bank list and individual note-page reader.
+- Question bank list and answer/explanation modal.
+- Video bank list with the existing “Open in YouTube” action.
+- Document folders and protected in-app document/PDF reader.
+- Loading, empty, paginated, locked, failed-load, and retry/close states.
+
+Keep document access restrictions. Protected documents do not gain Download, Share, or Open Externally actions. Do not replace external YouTube playback with a newly invented in-app video player. A question-review mark during a test is not automatically a persistent cross-app bookmark library.
+
+8. PREVIOUS-YEAR QUESTIONS
+Create the Meritzo equivalent of the registered previous-year-question screen with its existing filters, question/answer presentation, and navigation. Use clearly illustrative broad-exam content rather than presenting the existing nursing sample dataset as a verified all-exam question catalog. Do not add a fifth tab or invent a new entry path.
+
+9. TEST RULES AND TEST PLAYER
+Rules screen: preserve title, price where shown, duration, full marks, test-specific marking/penalty information, instructions, terms acknowledgement, validation, and Start Test loading state. This existing screen already handles test overview and instructions; do not force a second mandatory Test Details screen into the flow.
+
+Player: preserve the existing single-choice option-selection behavior, title, question count, timer, question/passage presentation, metadata, selected option, and question palette.
+Bottom actions match the source: Previous, Review/Marked, and Next; the final Next action becomes Submit. Keep the review toggle distinct from the selected answer.
+Palette: current, answered, unanswered/visited, unvisited, review, and answered-plus-review states, with legend and counts matching the source. Use symbols/labels in addition to colors.
+
+Preserve saved-session restoration, countdown/deadline behavior, near-timeout submission, submission loading, and result retrieval behavior. Do not imply the timer pauses when the app backgrounds or connectivity drops. Do not add a new confirmation step if the current submit action is direct.
+
+Do not insert unsupported Clear Response, separate Save & Next semantics, section timers, numerical inputs, multi-select grading, or subjective answers into the core flow. Use only option counts/formats supported by the current question model. Future exam-specific answer formats require explicitly annotated engine work. A broad catalog does not mean every exam format is already supported.
+
+During the test, keep the main bottom tabs out of the question workspace. Prioritize legibility, scrollable long content, stable controls, and clear submission feedback. Show correctness only in result/review contexts.
+
+10. RESULTS AND HISTORY
+ResultsScreen: preserve final score/total, rank where available, marks earned, penalty, attempted/correct/wrong/skipped counts, negative-marking breakdown, and question review.
+Review cards retain question text, selected answer, answer key, correct/incorrect/skipped state, marks where available, and explanations. Preserve the existing calculations and API data semantics. Do not introduce a replacement scoring formula through sample copy.
+
+Keep protected-result behavior and its notice. Do not provide result PDF export, result sharing, or screenshot actions where the source disables them. This restriction does not remove the separate Profile referral-share feature.
+
+MyResultsScreen: preserve overall accuracy, rank/streak/tests summary, score/recent-attempt insights, exam filter, dated result cards, and opening an attempt's results.
+
+Show unavailable metrics as unavailable, not fabricated zeroes or top ranks. Section analysis, progress charts, weak-topic recommendations, Retry Test, and state rankings are future concepts unless supported by the relevant current data/actions. Do not add them as guaranteed core functionality.
+
+11. LEADERBOARDS — MATCH THE TWO-LEVEL FLOW
+Home → LeaderboardScreen: attended quizzes with quiz title, user's rank, score, accuracy, participants, and View Leaderboard.
+Selected quiz → QuizLeaderboardScreen: current-user first-attempt summary, score, accuracy, correct/wrong, time spent, and candidate ranking rows.
+
+Keep rankings scoped to the returned quiz/cohort. Do not create a universal competitive rank combining unrelated exams. Separate state or exam-wide boards need additional support and belong in the expansion scope. Preserve loading, retry, and no-attended-quiz/no-candidate states.
+
+12. PAYMENT AND ACCESS
+Match existing bundle/course enrollment and purchase handling:
+Catalog/bundle → purchase action → hosted payment WebView → verification against payment history → enrolled/unlocked content when verified.
+
+Design the app-owned payment header, close/cancel behavior, loading, payment-in-progress, verification, failure, pending, and verified-access states. The provider-hosted payment form is an external surface; do not promise a custom native checkout or specific payment provider.
+
+A redirect or success-looking page alone does not unlock content. Reflect the existing payment verification and one-active-payment behavior. Preserve free enrollment, paid enrollment, existing validity, and purchased-content states as applicable.
+CoursesPaymentHistory: preserve the transaction history fields and statuses available in the source, including loading/empty/error cases.
+Use the actual data currency/format; illustrative INR prices must be annotated as demo values. Do not introduce recurring subscriptions, auto-renewal, coupons, wallets, or Central/State/Combined subscription plans into the core purchase flow.
+
+13. PROFILE AND ACCOUNT
+Keep avatar/name/phone/bio and the current profile details. Preserve:
+- My Courses to existing course bundles.
+- View Result to MyResultsScreen.
+- Edit Profile, including existing modal and routed edit variants where used.
+- Change Password.
+- Courses Payment History.
+- About Us.
+- Refer Now using the existing app referral-share behavior.
+- Support using the existing contact action.
+- Delete Account and its existing confirmation/flow.
+- Logout and its existing confirmation/flow.
+- Existing terms and privacy destinations.
+
+Update visual branding to Meritzo. Use clearly identified configuration placeholders for the new support email, referral URL, store links, and company/legal details; do not invent live Meritzo contact addresses or rewrite legal commitments as verified facts.
+Preserve the existing application-update prompt and applicable required/optional action states.
+
+14. SCALABLE EXAM DISCOVERY — ANNOTATED EXPANSION
+Create a reusable catalog concept alongside the core parity screens. Prefer presenting expanded content through current category/subcategory/search patterns. Dedicated multi-step selection screens are proposed extensions, not already implemented routes.
+
+Concept hierarchy:
+Category → exam → available bundle/mock series.
+State/union territory → available recruiting body/category → exam → series, with extra levels only where supported or annotated.
+
+Support all Indian states and union territories using data-driven lists, not one hard-coded regional layout. Use state names to disambiguate similarly named recruiting bodies. Exam names are illustrative catalog labels, not verified current notifications or syllabus claims.
+
+Illustrative catalog families:
+- Central recruitment: SSC, UPSC, Railways, Defence, and other recruitment.
+- Banking/finance: IBPS, SBI, RBI, NABARD, insurance exams.
+- State recruitment: State PSC, police, teaching, technical, healthcare, and other departments where available.
+- Engineering/entrance: JEE, GATE, BITSAT, state entrance exams.
+- Medical/healthcare: NEET, nursing, NORCET, ESIC, CHO, paramedical recruitment.
+- Teaching: CTET, NET, KVS, NVS, state TET/recruitment.
+- Law: CLAT, AILET, other entrance exams.
+- Management: CAT, XAT, CMAT, MAT, other entrance exams.
+
+Do not equate private entrance exams or every banking employer with central government employment. Group them under their own catalog families.
+
+“Global Mock Series” can title the expanded catalog/bundle collection. Reuse identical components with exam-specific data. Demonstrate central, state, banking, and healthcare examples. New availability requires populated content, access rules, and compatible question formats.
+
+Keep these future-only unless subsequently implemented: persistent selected-exam goals, state-specific rank, multilingual interface/test switching, notifications center, recommendation engine, daily challenge scheduling, advanced analytics, numerical/multi-select testing, cross-app bookmarks, report-question tools, and guest access. Design regional text expansion readiness without claiming existing translations.
+
+15. COMPONENTS, STATES, AND ACCESSIBILITY
+Use Auto Layout, semantic variables, text styles, reusable variants, editable text, and vector icons compatible with the app's existing icon families. Suggested names:
+Button/Primary; Button/Secondary; Input/Text; Input/Search; Card/Mock; Card/Bundle; Card/RecentAttempt; Card/Performance; Chip/Category; Navigation/Bottom; Question/Option; Question/Palette; Test/Timer; Result/Review; Leaderboard/Quiz; Leaderboard/Candidate; Modal/ContentViewer; Payment/WebViewShell.
+
+Include default, pressed, selected, disabled, loading, error, locked/unlocked, and completed states where meaningful. Cover catalog emptiness, no search results, no history/purchases, content load failure, payment verification, test preparation/submission, and missing result data. Match available recovery actions; do not create fake Retry or Resume controls.
+
+Use readable contrast, scalable text, accessible labels, visible selection indicators, and touch targets. Avoid color-only status. Do not clip long exam names, passages, explanations, or currency values. Keep fixed buttons above safe areas and keyboards. Avoid heavy animation, glassmorphism, 3D scenes, or custom rendering dependencies.
+
+16. FIGMA ORGANIZATION AND PROTOTYPES
+Pages:
+01 Cover & Scope
+02 Foundations & Assets
+03 Components
+04 Navigation & Source Mapping
+05 Splash, Onboarding & Auth
+06 Home
+07 Mock Bank
+08 Subject Bank & Bundles
+09 Study Material Viewers & PYQ
+10 Test Rules & Player
+11 Results & History
+12 Leaderboards
+13 Profile & Legal
+14 Payment & Access
+15 Loading, Empty, Error & Update States
+16 Responsive Examples
+17 Core Prototype
+18 Catalog Expansion Concepts
+
+Connect these core paths using existing behavior:
+- Splash/onboarding → email login/registration → Home.
+- Forgot password → email OTP → reset password → login.
+- Home shortcut → corresponding course catalog context → bundle → supported content viewer.
+- Mock Bank → rules/acknowledgement → question player → Next/Review/palette → Submit → results.
+- Home recent attempt or Profile View Result → results history/detail.
+- Home leaderboard → attended quizzes → quiz candidate leaderboard.
+- Bundle purchase → hosted payment → verification → accessible content.
+- Profile → edit/password/payment history/support/referral/account actions.
+
+Connect expansion prototypes separately and annotate their implementation dependencies. For each core frame, record the source screen/component, entry point, primary action, destination, and data dependency outside the mobile artwork. Keep implementation details out of user-facing copy.
+
+FINAL ACCEPTANCE CRITERIA
+Every registered source screen and major nested content view has a Meritzo equivalent. The four tabs, auth fields, catalog behavior, bundle access, payment verification, test controls, results, protected content, referral sharing, and quiz leaderboards remain functionally faithful. The UI retains NursetraApp's familiar card-based structure while adopting the supplied Meritzo identity. Expanded central/state/all-exam discovery is scalable and clearly distinguished from currently supported behavior. No unsupported action is presented as already working.
+
+Deliver the complete design system, mobile screens, key responsive variants, source-to-frame mapping, and connected core and expansion prototypes in one Figma file. Preserve functionality. Refine the UI. Rebrand to MeritzoApp.
